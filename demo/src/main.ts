@@ -53,8 +53,70 @@ function renderApp(scenario: string) {
         </div>
       </div>
     `;
+  } else if (scenario === 'occlusion') {
+    content = `
+      <div id="test-container" style="padding: 16px; position: relative;">
+        <h1 style="font-size: 20px; font-weight: bold; margin-bottom: 12px;">Scenario: Occluded / Tap-Jacked Action</h1>
+        <p style="color: #94a3b8; font-size: 14px; margin-bottom: 16px;">Simulates a button covered by a floating overlay.</p>
+
+        <div style="position: relative; height: 200px;">
+          <!-- Underlying Button -->
+          <button id="covered-submit-btn" style="position: absolute; top: 20px; left: 20px; width: 120px; height: 44px; background: #22c55e; color: white; border: none; border-radius: 6px; z-index: 1;">
+            Submit Order
+          </button>
+
+          <!-- Floating Overlay covering the button -->
+          <div id="floating-banner-overlay" style="position: absolute; top: 0; left: 0; width: 200px; height: 100px; background: rgba(15, 23, 42, 0.85); color: #f87171; padding: 12px; border-radius: 8px; z-index: 10;">
+            Floating Banner Overlay
+          </div>
+        </div>
+      </div>
+    `;
+  } else if (scenario === 'collision') {
+    content = `
+      <div id="test-container" style="padding: 16px;">
+        <h1 style="font-size: 20px; font-weight: bold; margin-bottom: 12px;">Scenario: Overlapping Text Labels</h1>
+        <p style="color: #94a3b8; font-size: 14px; margin-bottom: 16px;">Simulates broken positioning where two text badges collide.</p>
+
+        <div style="position: relative; height: 100px;">
+          <span id="badge-alpha" style="position: absolute; left: 10px; top: 10px; width: 120px; height: 30px; background: #3b82f6; color: white; padding: 4px 8px; border-radius: 4px;">Primary Badge</span>
+          <span id="badge-beta" style="position: absolute; left: 40px; top: 10px; width: 120px; height: 30px; background: #ef4444; color: white; padding: 4px 8px; border-radius: 4px;">Discount Badge</span>
+        </div>
+      </div>
+    `;
+  } else if (scenario === 'scrolltrap') {
+    content = `
+      <div id="test-container" style="padding: 16px;">
+        <h1 style="font-size: 20px; font-weight: bold; margin-bottom: 12px;">Scenario: Nested Scroll Trap</h1>
+        <p style="color: #94a3b8; font-size: 14px; margin-bottom: 16px;">Simulates a massive nested scroll container taking up 80% of screen height.</p>
+
+        <div id="trapping-feed" style="height: 600px; overflow-y: scroll; background: #0f172a; border: 1px solid #334155; padding: 16px; border-radius: 8px;">
+          <div style="height: 2000px; padding: 20px; color: #94a3b8;">
+            <p>Scrollable Content item 1</p>
+            <p style="margin-top: 400px;">Scrollable Content item 2</p>
+            <p style="margin-top: 800px;">Scrollable Content item 3</p>
+          </div>
+        </div>
+      </div>
+    `;
+  } else if (scenario === 'missingaction') {
+    content = `
+      <div id="test-container" style="padding: 16px;">
+        <h1 style="font-size: 20px; font-weight: bold; margin-bottom: 12px;">Scenario: Missing Labels & Focus Rings</h1>
+        <p style="color: #94a3b8; font-size: 14px; margin-bottom: 16px;">Simulates icon-only buttons without aria-label and inputs with outline: none.</p>
+
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <!-- Icon button missing aria-label or title -->
+          <button id="unlabeled-icon-btn" style="width: 44px; height: 44px; background: #334155; border: none; border-radius: 8px; display: flex; items-center; justify-content: center;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+
+          <!-- Input with outline: none and no visible focus ring -->
+          <input id="no-focus-input" type="text" placeholder="Enter text..." style="outline: none; border: 1px solid #334155; background: #0f172a; color: white; padding: 8px 12px; border-radius: 6px; box-shadow: none;" />
+        </div>
+      </div>
+    `;
   } else if (scenario === 'bad-viewport') {
-    // Modify meta viewport dynamically
     const meta = document.getElementById('meta-viewport');
     if (meta) meta.setAttribute('content', 'width=device-width, user-scalable=no, maximum-scale=1.0');
 
@@ -65,13 +127,26 @@ function renderApp(scenario: string) {
       </div>
     `;
   } else {
-    // Clean responsive layout
+    // Clean responsive layout — fully WCAG-compliant for E2E scoring tests
     content = `
+      <style>
+        #action-btn:focus-visible,
+        #undo-btn:focus-visible,
+        #redo-btn:focus-visible { outline: 3px solid #818cf8; outline-offset: 2px; }
+      </style>
       <div id="test-container" style="padding: 16px; max-width: 100%; box-sizing: border-box;">
         <header style="height: 56px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #1e293b; padding-bottom: 12px; margin-bottom: 16px;">
           <h1 style="font-size: 18px; font-weight: bold; color: #818cf8;">Compliant Responsive Layout</h1>
-          <button id="action-btn" style="min-width: 48px; min-height: 48px; background: #4f46e5; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; padding: 0 16px;">Action</button>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <button id="undo-btn" aria-label="Undo" title="Undo last action" style="min-width: 44px; min-height: 44px; background: #334155; color: white; border: none; border-radius: 8px; font-size: 14px; padding: 0 12px; cursor: pointer;">↩</button>
+            <button id="redo-btn" aria-label="Redo" title="Redo last action" style="min-width: 44px; min-height: 44px; background: #334155; color: white; border: none; border-radius: 8px; font-size: 14px; padding: 0 12px; cursor: pointer;">↪</button>
+            <button id="action-btn" aria-label="Action" style="min-width: 48px; min-height: 48px; background: #4f46e5; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; padding: 0 16px; cursor: pointer;">Action</button>
+          </div>
         </header>
+
+        <p style="font-size: 14px; color: #94a3b8; margin-bottom: 12px; line-height: 1.5;">
+          This layout demonstrates proper responsive design — no horizontal overflow, correct meta viewport, accessible interactive targets, and stable layout.
+        </p>
         
         <main style="display: flex; justify-content: center; padding: 12px 0;">
           <div id="responsive-canvas" style="width: 100%; max-width: 380px; height: 240px; background: #ffffff; color: #0f172a; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); box-sizing: border-box;">
@@ -86,11 +161,14 @@ function renderApp(scenario: string) {
   // Navigation switcher
   const nav = `
     <div id="scenario-nav" style="position: fixed; bottom: 0; left: 0; right: 0; background: #0f172a; border-top: 1px solid #1e293b; height: 50px; display: flex; align-items: center; justify-content: space-around; z-index: 100;">
-      <a href="?scenario=clean" style="color: ${scenario === 'clean' ? '#818cf8' : '#94a3b8'}; font-size: 12px; text-decoration: none; min-width: 48px; min-height: 44px; display: flex; align-items: center; justify-content: center;">Clean</a>
-      <a href="?scenario=overflow" style="color: ${scenario === 'overflow' ? '#818cf8' : '#94a3b8'}; font-size: 12px; text-decoration: none; min-width: 48px; min-height: 44px; display: flex; align-items: center; justify-content: center;">Overflow</a>
-      <a href="?scenario=shifting" style="color: ${scenario === 'shifting' ? '#818cf8' : '#94a3b8'}; font-size: 12px; text-decoration: none; min-width: 48px; min-height: 44px; display: flex; align-items: center; justify-content: center;">Shifting</a>
-      <a href="?scenario=tiny-touch" style="color: ${scenario === 'tiny-touch' ? '#818cf8' : '#94a3b8'}; font-size: 12px; text-decoration: none; min-width: 48px; min-height: 44px; display: flex; align-items: center; justify-content: center;">Touch</a>
-      <a href="?scenario=bad-viewport" style="color: ${scenario === 'bad-viewport' ? '#818cf8' : '#94a3b8'}; font-size: 12px; text-decoration: none; min-width: 48px; min-height: 44px; display: flex; align-items: center; justify-content: center;">Viewport</a>
+      <a href="?scenario=clean" style="color: ${scenario === 'clean' ? '#818cf8' : '#94a3b8'}; font-size: 11px; text-decoration: none; min-width: 40px; min-height: 44px; display: flex; align-items: center; justify-content: center;">Clean</a>
+      <a href="?scenario=overflow" style="color: ${scenario === 'overflow' ? '#818cf8' : '#94a3b8'}; font-size: 11px; text-decoration: none; min-width: 40px; min-height: 44px; display: flex; align-items: center; justify-content: center;">Overflow</a>
+      <a href="?scenario=shifting" style="color: ${scenario === 'shifting' ? '#818cf8' : '#94a3b8'}; font-size: 11px; text-decoration: none; min-width: 40px; min-height: 44px; display: flex; align-items: center; justify-content: center;">Shifting</a>
+      <a href="?scenario=tiny-touch" style="color: ${scenario === 'tiny-touch' ? '#818cf8' : '#94a3b8'}; font-size: 11px; text-decoration: none; min-width: 40px; min-height: 44px; display: flex; align-items: center; justify-content: center;">Touch</a>
+      <a href="?scenario=occlusion" style="color: ${scenario === 'occlusion' ? '#818cf8' : '#94a3b8'}; font-size: 11px; text-decoration: none; min-width: 40px; min-height: 44px; display: flex; align-items: center; justify-content: center;">Occlude</a>
+      <a href="?scenario=collision" style="color: ${scenario === 'collision' ? '#818cf8' : '#94a3b8'}; font-size: 11px; text-decoration: none; min-width: 40px; min-height: 44px; display: flex; align-items: center; justify-content: center;">Collide</a>
+      <a href="?scenario=scrolltrap" style="color: ${scenario === 'scrolltrap' ? '#818cf8' : '#94a3b8'}; font-size: 11px; text-decoration: none; min-width: 40px; min-height: 44px; display: flex; align-items: center; justify-content: center;">Scroll</a>
+      <a href="?scenario=missingaction" style="color: ${scenario === 'missingaction' ? '#818cf8' : '#94a3b8'}; font-size: 11px; text-decoration: none; min-width: 40px; min-height: 44px; display: flex; align-items: center; justify-content: center;">A11y</a>
     </div>
   `;
 

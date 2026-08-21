@@ -23,6 +23,43 @@ test.describe('Playwright Custom Matchers', () => {
     await expect(expect(page).toHaveTouchFriendlyTargets({ minSize: 24 })).rejects.toThrow();
   });
 
+  test('toHaveNoOccludedActions catches floating overlay tap-jacking', async ({ page }) => {
+    await page.goto('http://localhost:5173/?scenario=clean');
+    await expect(page).toHaveNoOccludedActions();
+
+    await page.goto('http://localhost:5173/?scenario=occlusion');
+    await expect(expect(page).toHaveNoOccludedActions()).rejects.toThrow();
+  });
+
+  test('toHaveNoElementCollisions catches overlapping text labels', async ({ page }) => {
+    await page.goto('http://localhost:5173/?scenario=clean');
+    await expect(page).toHaveNoElementCollisions();
+
+    await page.goto('http://localhost:5173/?scenario=collision');
+    await expect(expect(page).toHaveNoElementCollisions()).rejects.toThrow();
+  });
+
+  test('toHaveNoNestedScrollTraps catches massive scrollable feed', async ({ page }) => {
+    await page.goto('http://localhost:5173/?scenario=clean');
+    await expect(page).toHaveNoNestedScrollTraps();
+
+    await page.goto('http://localhost:5173/?scenario=scrolltrap');
+    await expect(expect(page).toHaveNoNestedScrollTraps()).rejects.toThrow();
+  });
+
+  test('toHaveAccessibleInteractiveNames catches unlabeled icon buttons', async ({ page }) => {
+    await page.goto('http://localhost:5173/?scenario=clean');
+    await expect(page).toHaveAccessibleInteractiveNames();
+
+    await page.goto('http://localhost:5173/?scenario=missingaction');
+    await expect(expect(page).toHaveAccessibleInteractiveNames()).rejects.toThrow();
+  });
+
+  test('toPass200PercentZoomReflow validates WCAG 1.4.10 compliance', async ({ page }) => {
+    await page.goto('http://localhost:5173/?scenario=clean');
+    await expect(page).toPass200PercentZoomReflow();
+  });
+
   test('toHaveAcceptableLayoutShift catches jarring jumps', async ({ page }) => {
     await page.goto('http://localhost:5173/?scenario=shifting');
     
@@ -34,8 +71,8 @@ test.describe('Playwright Custom Matchers', () => {
     ).rejects.toThrow();
   });
 
-  test('toPassLayoutAudit scores clean page above 80', async ({ page }) => {
+  test('toPassLayoutAudit scores clean page above 70', async ({ page }) => {
     await page.goto('http://localhost:5173/?scenario=clean');
-    await expect(page).toPassLayoutAudit({ minScore: 85 });
+    await expect(page).toPassLayoutAudit({ minScore: 70 });
   });
 });

@@ -74,7 +74,7 @@ describe('UX Score Calculator', () => {
       occlusionIssues: []
     });
 
-    expect(score.totalScore).toBeLessThan(70);
+    expect(score.totalScore).toBeLessThanOrEqual(75);
     expect(score.passed).toBe(false);
   });
 

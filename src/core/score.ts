@@ -1,8 +1,13 @@
 import {
+  AccessibleNameIssue,
+  ElementCollisionIssue,
+  FocusIndicatorIssue,
   LayoutShiftResult,
   OcclusionIssue,
   OverflowIssue,
   ReadabilityIssue,
+  ScrollTrapIssue,
+  ThumbZoneAnalysis,
   TouchTargetIssue,
   UXCategoryScore,
   UXGrade,
@@ -26,6 +31,11 @@ export function computeUXScore(params: {
   touchTargetIssues: TouchTargetIssue[];
   readabilityIssues: ReadabilityIssue[];
   occlusionIssues: OcclusionIssue[];
+  collisionIssues?: ElementCollisionIssue[];
+  scrollTrapIssues?: ScrollTrapIssue[];
+  accessibleNameIssues?: AccessibleNameIssue[];
+  focusIndicatorIssues?: FocusIndicatorIssue[];
+  thumbZoneAnalysis?: ThumbZoneAnalysis;
 }): UXScore {
   const {
     overflowIssues,
@@ -33,144 +43,152 @@ export function computeUXScore(params: {
     layoutShiftResult,
     touchTargetIssues,
     readabilityIssues,
-    occlusionIssues
+    occlusionIssues,
+    collisionIssues = [],
+    scrollTrapIssues = [],
+    accessibleNameIssues = [],
+    focusIndicatorIssues = [],
+    thumbZoneAnalysis
   } = params;
 
-  // 1. Overflow & Fit Category (35% weight)
-  const maxOverflowScore = 35;
+  // 1. Overflow & Fit Category (25% weight)
+  const maxOverflowScore = 25;
   let overflowPenalty = 0;
 
-  if (viewportFit.contentBleeds) {
-    overflowPenalty += 15;
-  }
-  if (!viewportFit.isValidMetaViewport) {
-    overflowPenalty += 10;
-  }
-  if (!viewportFit.allowsUserZoom) {
-    overflowPenalty += 8;
-  }
+  if (viewportFit.contentBleeds) overflowPenalty += 12;
+  if (!viewportFit.isValidMetaViewport) overflowPenalty += 8;
+  if (!viewportFit.allowsUserZoom) overflowPenalty += 6;
 
   for (const issue of overflowIssues) {
-    if (issue.severity === 'critical') {
-      overflowPenalty += 10;
-    } else {
-      overflowPenalty += 4;
-    }
+    overflowPenalty += (issue.severity === 'critical' ? 8 : 3);
+  }
+  for (const trap of scrollTrapIssues) {
+    overflowPenalty += (trap.severity === 'critical' ? 6 : 2);
   }
 
   const overflowScoreVal = Math.max(0, Math.min(maxOverflowScore, maxOverflowScore - overflowPenalty));
-  const overflowGrade = calculateGrade((overflowScoreVal / maxOverflowScore) * 100);
-  const totalOverflowIssues = overflowIssues.length + (viewportFit.issues.length);
-
   const overflowCategory: UXCategoryScore = {
     name: 'Overflow & Viewport Fit',
     score: Math.round(overflowScoreVal * 10) / 10,
     weight: maxOverflowScore,
     maxScore: maxOverflowScore,
-    grade: overflowGrade,
+    grade: calculateGrade((overflowScoreVal / maxOverflowScore) * 100),
     passed: overflowScoreVal >= maxOverflowScore * 0.8,
-    issueCount: totalOverflowIssues,
-    summary: totalOverflowIssues === 0
-      ? 'Perfect viewport fit: no horizontal bleed or clipping detected.'
-      : `${totalOverflowIssues} viewport/overflow issues found (bleeds: ${viewportFit.contentBleeds ? 'yes' : 'no'}).`
+    issueCount: overflowIssues.length + scrollTrapIssues.length + viewportFit.issues.length,
+    summary: overflowIssues.length === 0 && scrollTrapIssues.length === 0 && !viewportFit.contentBleeds
+      ? 'Perfect viewport fit without horizontal overflow or scroll traps.'
+      : `${overflowIssues.length} overflow, ${scrollTrapIssues.length} scroll trap issues detected.`
   };
 
-  // 2. Stability & Layout Shift Category (25% weight)
-  const maxStabilityScore = 25;
+  // 2. Stability & Layout Shift Category (20% weight)
+  const maxStabilityScore = 20;
   let stabilityScoreVal = maxStabilityScore;
 
   if (layoutShiftResult) {
     let shiftPenalty = 0;
-    shiftPenalty += layoutShiftResult.jarringShiftCount * 8;
-    shiftPenalty += Math.min(15, layoutShiftResult.totalShiftScore * 100);
+    shiftPenalty += layoutShiftResult.jarringShiftCount * 6;
+    shiftPenalty += Math.min(12, layoutShiftResult.totalShiftScore * 100);
     if (!layoutShiftResult.isAcceptable) {
-      shiftPenalty = Math.max(shiftPenalty, 10);
+      shiftPenalty = Math.max(shiftPenalty, 8);
     }
     stabilityScoreVal = Math.max(0, Math.min(maxStabilityScore, maxStabilityScore - shiftPenalty));
   }
 
-  const stabilityGrade = calculateGrade((stabilityScoreVal / maxStabilityScore) * 100);
   const stabilityCategory: UXCategoryScore = {
-    name: 'Layout Stability & Transitions',
+    name: 'Layout Stability & Shifts',
     score: Math.round(stabilityScoreVal * 10) / 10,
     weight: maxStabilityScore,
     maxScore: maxStabilityScore,
-    grade: stabilityGrade,
+    grade: calculateGrade((stabilityScoreVal / maxStabilityScore) * 100),
     passed: stabilityScoreVal >= maxStabilityScore * 0.8,
     issueCount: layoutShiftResult ? layoutShiftResult.items.length : 0,
-    summary: layoutShiftResult
-      ? layoutShiftResult.summary
-      : 'Visual layout is stable with no tracked jarring shifts.'
+    summary: layoutShiftResult ? layoutShiftResult.summary : 'Visual layout is stable without jarring element jumps.'
   };
 
-  // 3. Touch Ergonomics Category (20% weight)
+  // 3. Touch Ergonomics & Reachability (20% weight)
   const maxTouchScore = 20;
   let touchPenalty = 0;
 
   for (const issue of touchTargetIssues) {
-    if (issue.severity === 'critical') {
-      touchPenalty += 5;
-    } else {
-      touchPenalty += 2;
-    }
+    touchPenalty += (issue.severity === 'critical' ? 4 : 2);
+  }
+  if (thumbZoneAnalysis && thumbZoneAnalysis.ergonomicsScore < 70) {
+    touchPenalty += 3;
   }
 
   const touchScoreVal = Math.max(0, Math.min(maxTouchScore, maxTouchScore - touchPenalty));
-  const touchGrade = calculateGrade((touchScoreVal / maxTouchScore) * 100);
   const touchCategory: UXCategoryScore = {
-    name: 'Touch Ergonomics & Accessibility',
+    name: 'Touch Ergonomics & Reachability',
     score: Math.round(touchScoreVal * 10) / 10,
     weight: maxTouchScore,
     maxScore: maxTouchScore,
-    grade: touchGrade,
+    grade: calculateGrade((touchScoreVal / maxTouchScore) * 100),
     passed: touchScoreVal >= maxTouchScore * 0.8,
     issueCount: touchTargetIssues.length,
     summary: touchTargetIssues.length === 0
-      ? 'All interactive touch targets meet accessibility standards (≥ 24px/44px).'
-      : `${touchTargetIssues.length} touch target sizing or spacing issues detected.`
+      ? 'All interactive touch targets meet WCAG sizing standards (≥ 24px/44px).'
+      : `${touchTargetIssues.length} touch target sizing or collision issues detected.`
   };
 
-  // 4. Readability & Occlusion Category (20% weight)
+  // 4. Readability, Collisions & Visibility (20% weight)
   const maxReadabilityScore = 20;
   let readabilityPenalty = 0;
 
   for (const issue of readabilityIssues) {
-    if (issue.severity === 'warning') {
-      readabilityPenalty += 3;
-    } else {
-      readabilityPenalty += 1;
-    }
+    readabilityPenalty += (issue.severity === 'warning' ? 2 : 1);
   }
-
-  for (const issue of occlusionIssues) {
-    if (issue.severity === 'critical') {
-      readabilityPenalty += 6;
-    } else {
-      readabilityPenalty += 3;
-    }
+  for (const occ of occlusionIssues) {
+    readabilityPenalty += (occ.severity === 'critical' ? 5 : 2);
+  }
+  for (const col of collisionIssues) {
+    readabilityPenalty += (col.severity === 'critical' ? 5 : 2);
   }
 
   const readabilityScoreVal = Math.max(0, Math.min(maxReadabilityScore, maxReadabilityScore - readabilityPenalty));
-  const readabilityGrade = calculateGrade((readabilityScoreVal / maxReadabilityScore) * 100);
-  const totalReadabilityIssues = readabilityIssues.length + occlusionIssues.length;
-
+  const totalVisibilityIssues = readabilityIssues.length + occlusionIssues.length + collisionIssues.length;
   const readabilityCategory: UXCategoryScore = {
-    name: 'Readability & Visual Clarity',
+    name: 'Readability & Visual Hierarchy',
     score: Math.round(readabilityScoreVal * 10) / 10,
     weight: maxReadabilityScore,
     maxScore: maxReadabilityScore,
-    grade: readabilityGrade,
+    grade: calculateGrade((readabilityScoreVal / maxReadabilityScore) * 100),
     passed: readabilityScoreVal >= maxReadabilityScore * 0.8,
-    issueCount: totalReadabilityIssues,
-    summary: totalReadabilityIssues === 0
-      ? 'Text is legible across viewports without unintentional truncation or occlusion.'
-      : `${totalReadabilityIssues} readability or element occlusion issues found.`
+    issueCount: totalVisibilityIssues,
+    summary: totalVisibilityIssues === 0
+      ? 'Clean visual hierarchy without element occlusion, text collision, or unreadable truncation.'
+      : `${totalVisibilityIssues} text, occlusion, or collision issue(s) detected.`
   };
 
-  // Calculate total score
-  const totalScoreVal = Math.round((overflowScoreVal + stabilityScoreVal + touchScoreVal + readabilityScoreVal) * 10) / 10;
+  // 5. Accessibility & Keyboard Navigation (15% weight)
+  const maxA11yScore = 15;
+  let a11yPenalty = 0;
+
+  for (const acc of accessibleNameIssues) {
+    a11yPenalty += (acc.severity === 'critical' ? 4 : 2);
+  }
+  for (const foc of focusIndicatorIssues) {
+    a11yPenalty += (foc.severity === 'critical' ? 4 : 2);
+  }
+
+  const a11yScoreVal = Math.max(0, Math.min(maxA11yScore, maxA11yScore - a11yPenalty));
+  const totalA11yIssues = accessibleNameIssues.length + focusIndicatorIssues.length;
+  const a11yCategory: UXCategoryScore = {
+    name: 'Accessibility & Keyboard Navigation',
+    score: Math.round(a11yScoreVal * 10) / 10,
+    weight: maxA11yScore,
+    maxScore: maxA11yScore,
+    grade: calculateGrade((a11yScoreVal / maxA11yScore) * 100),
+    passed: a11yScoreVal >= maxA11yScore * 0.8,
+    issueCount: totalA11yIssues,
+    summary: totalA11yIssues === 0
+      ? 'Accessible names on all icon buttons and visible keyboard focus rings.'
+      : `${totalA11yIssues} missing label or focus ring issue(s) detected.`
+  };
+
+  // Total Score
+  const totalScoreVal = Math.round((overflowScoreVal + stabilityScoreVal + touchScoreVal + readabilityScoreVal + a11yScoreVal) * 10) / 10;
   const overallGrade = calculateGrade(totalScoreVal);
-  const passed = totalScoreVal >= 80 && overflowScoreVal >= (maxOverflowScore * 0.7) && touchScoreVal >= (maxTouchScore * 0.7);
+  const passed = totalScoreVal >= 70 && overflowScoreVal >= (maxOverflowScore * 0.6) && touchScoreVal >= (maxTouchScore * 0.6);
 
   return {
     totalScore: totalScoreVal,
@@ -180,7 +198,8 @@ export function computeUXScore(params: {
       overflowAndFit: overflowCategory,
       stability: stabilityCategory,
       touchErgonomics: touchCategory,
-      readabilityAndVisibility: readabilityCategory
+      readabilityAndVisibility: readabilityCategory,
+      accessibilityAndFocus: a11yCategory
     }
   };
 }

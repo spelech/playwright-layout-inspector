@@ -10,14 +10,21 @@ export function evaluateTextReadability(
     clientWidth: number;
     textOverflow: string;
     overflow: string;
+    hasAccessibleTooltip?: boolean;
   },
   isMobile: boolean,
   minFontSizePx = 12
 ): ReadabilityIssue | null {
   const isIllegibleOnMobile = isMobile && element.fontSizePx < minFontSizePx;
   const isTruncated = element.scrollWidth > element.clientWidth + 2 && (element.overflow === 'hidden' || element.textOverflow === 'ellipsis');
+  const hasAccessibleTooltip = !!element.hasAccessibleTooltip;
 
   if (!isIllegibleOnMobile && !isTruncated) {
+    return null;
+  }
+
+  // If text is intentionally truncated but has an accessible tooltip/title, downgrade severity
+  if (isTruncated && hasAccessibleTooltip && !isIllegibleOnMobile) {
     return null;
   }
 
@@ -39,6 +46,7 @@ export function evaluateTextReadability(
     lineHeightPx: element.lineHeightPx ? Math.round(element.lineHeightPx * 10) / 10 : undefined,
     isTruncated,
     isIllegibleOnMobile,
+    hasAccessibleTooltip,
     severity,
     suggestion
   };

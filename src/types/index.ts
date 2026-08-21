@@ -38,6 +38,12 @@ export interface ElementComputedStyles {
   padding: string;
   fontSize?: string;
   lineHeight?: string;
+  zIndex?: string;
+  outline?: string;
+  outlineWidth?: string;
+  outlineStyle?: string;
+  outlineColor?: string;
+  boxShadow?: string;
 }
 
 export interface OverflowIssue {
@@ -124,17 +130,93 @@ export interface ReadabilityIssue {
   lineHeightPx?: number;
   isTruncated: boolean;
   isIllegibleOnMobile: boolean;
+  hasAccessibleTooltip: boolean;
   severity: 'warning' | 'info';
   suggestion: string;
 }
 
 export interface OcclusionIssue {
   selector: string;
+  tagName: string;
+  boundingBox: BoundingBox;
   occludedBySelector: string;
+  occludedByTagName: string;
+  occludedPointsCount: number;
+  totalPointsChecked: number;
   occludedAreaRatio: number;
   isInteractive: boolean;
   severity: 'critical' | 'warning';
   suggestion: string;
+}
+
+export interface ElementCollisionIssue {
+  selectorA: string;
+  selectorB: string;
+  boundingBoxA: BoundingBox;
+  boundingBoxB: BoundingBox;
+  overlapAreaPx: number;
+  isTextCollision: boolean;
+  severity: 'critical' | 'warning';
+  suggestion: string;
+}
+
+export interface ScrollTrapIssue {
+  selector: string;
+  tagName: string;
+  scrollHeight: number;
+  clientHeight: number;
+  scrollWidth: number;
+  clientWidth: number;
+  viewportRatio: number;
+  isTrapRisk: boolean;
+  severity: 'critical' | 'warning';
+  suggestion: string;
+}
+
+export interface AccessibleNameIssue {
+  selector: string;
+  tagName: string;
+  isIconOnly: boolean;
+  computedRole: string;
+  textSnippet?: string;
+  severity: 'critical' | 'warning';
+  suggestion: string;
+}
+
+export interface FocusIndicatorIssue {
+  selector: string;
+  tagName: string;
+  hasVisibleFocusRing: boolean;
+  computedOutline: string;
+  computedBoxShadow: string;
+  severity: 'critical' | 'warning';
+  suggestion: string;
+}
+
+export interface ThumbZoneAnalysis {
+  naturalZoneCount: number;
+  reachZoneCount: number;
+  hardZoneCount: number;
+  totalInteractiveCount: number;
+  hardZoneElements: {
+    selector: string;
+    text?: string;
+    x: number;
+    y: number;
+  }[];
+  ergonomicsScore: number;
+  summary: string;
+}
+
+export interface ZoomReflowResult {
+  zoomFactor: number;
+  passesReflow: boolean;
+  hasHorizontalBleed: boolean;
+  pageScrollWidth: number;
+  windowWidth: number;
+  collisionCount: number;
+  issues: string[];
+  summary: string;
 }
 
 export type UXGrade = 'A+' | 'A' | 'B' | 'C' | 'D' | 'F';
@@ -155,10 +237,11 @@ export interface UXScore {
   grade: UXGrade;
   passed: boolean;
   categories: {
-    stability: UXCategoryScore;
     overflowAndFit: UXCategoryScore;
+    stability: UXCategoryScore;
     touchErgonomics: UXCategoryScore;
     readabilityAndVisibility: UXCategoryScore;
+    accessibilityAndFocus: UXCategoryScore;
   };
 }
 
@@ -182,6 +265,12 @@ export interface LayoutAuditOptions {
   checkReadability?: boolean;
   minFontSizePx?: number; // default 12
   checkOcclusion?: boolean;
+  checkCollisions?: boolean;
+  checkScrollTraps?: boolean;
+  checkAccessibleNames?: boolean;
+  checkFocusIndicators?: boolean;
+  checkThumbZones?: boolean;
+  test200PercentZoomReflow?: boolean;
   includeScreenshot?: boolean;
   highlightIssuesInScreenshot?: boolean;
   ignoreSelectors?: string[];
@@ -199,6 +288,12 @@ export interface LayoutAuditResult {
   viewportFit: ViewportFitResult;
   readabilityIssues: ReadabilityIssue[];
   occlusionIssues: OcclusionIssue[];
+  collisionIssues: ElementCollisionIssue[];
+  scrollTrapIssues: ScrollTrapIssue[];
+  accessibleNameIssues: AccessibleNameIssue[];
+  focusIndicatorIssues: FocusIndicatorIssue[];
+  thumbZoneAnalysis?: ThumbZoneAnalysis;
+  zoomReflowResult?: ZoomReflowResult;
   screenshotBase64?: string;
   annotatedScreenshotBase64?: string;
   executionTimeMs: number;

@@ -43,18 +43,45 @@ export interface InPageAuditData {
       padding: string;
       fontSize: string;
       lineHeight: string;
+      zIndex?: string;
+      outlineWidth?: string;
+      outlineStyle?: string;
+      outlineColor?: string;
+      boxShadow?: string;
     };
     scrollWidth: number;
     clientWidth: number;
     scrollHeight: number;
     clientHeight: number;
     isInteractive: boolean;
+    isTextOnly: boolean;
+    hasAccessibleName: boolean;
+    hasSvgOrImgChild: boolean;
+    ancestors?: string[];
+    role?: string | null;
+    ariaLabel?: string | null;
+    ariaLabelledBy?: string | null;
+    title?: string | null;
   }>;
   occlusions: Array<{
     selector: string;
-    occludedBySelector: string;
-    occludedAreaRatio: number;
-    isInteractive: boolean;
+    tagName: string;
+    boundingBox: {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+      top: number;
+      right: number;
+      bottom: number;
+      left: number;
+    };
+    raycastResults: Array<{
+      point: { x: number; y: number };
+      topSelector: string;
+      topTagName: string;
+      isTargetOrDescendant: boolean;
+    }>;
   }>;
 }
 
@@ -62,7 +89,6 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
   const options = JSON.parse(optionsJson || '{}');
   const ignoreSelectors: string[] = options.ignoreSelectors || [];
 
-  // Helper to generate a concise, unique CSS selector
   function getCssSelector(el: Element): string {
     if (el.id) {
       return `#${CSS.escape(el.id)}`;
@@ -94,7 +120,7 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
       }
       path.unshift(selector);
       current = current.parentElement;
-      if (path.length > 5) break; // keep selector readable
+      if (path.length > 5) break;
     }
     return path.join(' > ');
   }
@@ -120,7 +146,6 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
   const collectedElements: InPageAuditData['elements'] = [];
 
   for (const el of allElements) {
-    // Skip scripts, styles, svgs internals, noscript
     const tag = el.tagName.toLowerCase();
     if (['script', 'style', 'noscript', 'path', 'g', 'defs', 'clippath', 'symbol', 'use', 'br', 'hr'].includes(tag)) {
       continue;
@@ -132,7 +157,6 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
     }
 
     const rect = el.getBoundingClientRect();
-    // Skip elements that take up no space
     if (rect.width <= 0 && rect.height <= 0) {
       continue;
     }
@@ -148,14 +172,27 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
     const isInput = ['input', 'select', 'textarea'].includes(tag);
     const hasCursorPointer = comp.cursor === 'pointer';
     const hasExplicitClickHandler = el.hasAttribute('onclick') || typeof (el as any).onclick === 'function';
-    
-    // Check if element is inside an outer interactive container (e.g. svg inside a button)
+
     const interactiveAncestor = el.parentElement ? el.parentElement.closest('button, a[href], [role="button"], [role="tab"]') : null;
     const isDirectInteractive = isButton || isLink || isInput || hasExplicitClickHandler || (hasCursorPointer && ['div', 'span', 'li'].includes(tag));
     const isInteractive = isDirectInteractive && !interactiveAncestor;
 
     const textContent = (el.textContent || '').trim().replace(/\s+/g, ' ');
     const textSnippet = textContent.length > 60 ? textContent.substring(0, 57) + '...' : textContent;
+    const isTextOnly = ['p', 'span', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'label', 'strong', 'em', 'b', 'i', 'small'].includes(tag);
+
+    const hasSvgOrImgChild = !!el.querySelector('svg, img');
+    const ariaLabel = el.getAttribute('aria-label');
+    const ariaLabelledBy = el.getAttribute('aria-labelledby');
+    const title = el.getAttribute('title');
+    const hasAccessibleName = !!(ariaLabel?.trim() || ariaLabelledBy?.trim() || title?.trim() || textContent.length > 0);
+
+    const ancestors: string[] = [];
+    let p = el.parentElement;
+    while (p && p.tagName.toLowerCase() !== 'html') {
+      ancestors.push(getCssSelector(p));
+      p = p.parentElement;
+    }
 
     collectedElements.push({
       selector,
@@ -163,6 +200,7 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
       id: el.id || '',
       className: typeof el.className === 'string' ? el.className : '',
       textSnippet,
+      ancestors,
       rect: {
         x: Math.round(rect.x * 100) / 100,
         y: Math.round(rect.y * 100) / 100,
@@ -190,36 +228,76 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
         margin: comp.margin,
         padding: comp.padding,
         fontSize: comp.fontSize,
-        lineHeight: comp.lineHeight
+        lineHeight: comp.lineHeight,
+        zIndex: comp.zIndex,
+        outlineWidth: comp.outlineWidth,
+        outlineStyle: comp.outlineStyle,
+        outlineColor: comp.outlineColor,
+        boxShadow: comp.boxShadow
       },
       scrollWidth: el.scrollWidth,
       clientWidth: el.clientWidth,
       scrollHeight: el.scrollHeight,
       clientHeight: el.clientHeight,
-      isInteractive
+      isInteractive,
+      isTextOnly,
+      hasAccessibleName,
+      hasSvgOrImgChild,
+      role,
+      ariaLabel,
+      ariaLabelledBy,
+      title
     });
   }
 
-  // Probe occlusions on interactive elements
+  // Multi-point raycast occlusion sampling on interactive elements
   const occlusions: InPageAuditData['occlusions'] = [];
   for (const item of collectedElements) {
     if (!item.isInteractive) continue;
-    const centerX = item.rect.x + item.rect.width / 2;
-    const centerY = item.rect.y + item.rect.height / 2;
 
-    if (centerX >= 0 && centerX <= vp.width && centerY >= 0 && centerY <= vp.height) {
-      const topEl = document.elementFromPoint(centerX, centerY);
-      if (topEl) {
-        const topSelector = getCssSelector(topEl);
-        if (topSelector !== item.selector && !topEl.contains(document.querySelector(item.selector)) && !document.querySelector(item.selector)?.contains(topEl)) {
-          occlusions.push({
-            selector: item.selector,
-            occludedBySelector: topSelector,
-            occludedAreaRatio: 0.5,
-            isInteractive: true
+    const r = item.rect;
+    // Skip offscreen elements
+    if (r.right < 0 || r.left > vp.width || r.bottom < 0 || r.top > vp.height) {
+      continue;
+    }
+
+    const insetX = Math.min(4, r.width * 0.1);
+    const insetY = Math.min(4, r.height * 0.1);
+    const points = [
+      { x: r.x + r.width / 2, y: r.y + r.height / 2 },
+      { x: r.x + insetX, y: r.y + insetY },
+      { x: r.right - insetX, y: r.y + insetY },
+      { x: r.x + insetX, y: r.bottom - insetY },
+      { x: r.right - insetX, y: r.bottom - insetY }
+    ];
+
+    const targetDomEl = document.querySelector(item.selector);
+    if (!targetDomEl) continue;
+
+    const raycastResults = [];
+    for (const pt of points) {
+      if (pt.x >= 0 && pt.x <= vp.width && pt.y >= 0 && pt.y <= vp.height) {
+        const topEl = document.elementFromPoint(pt.x, pt.y);
+        if (topEl) {
+          const topSelector = getCssSelector(topEl);
+          const isTargetOrDescendant = topEl === targetDomEl || targetDomEl.contains(topEl);
+          raycastResults.push({
+            point: pt,
+            topSelector,
+            topTagName: topEl.tagName.toLowerCase(),
+            isTargetOrDescendant
           });
         }
       }
+    }
+
+    if (raycastResults.some(res => !res.isTargetOrDescendant)) {
+      occlusions.push({
+        selector: item.selector,
+        tagName: item.tagName,
+        boundingBox: item.rect,
+        raycastResults
+      });
     }
   }
 

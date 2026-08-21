@@ -78,6 +78,129 @@ export const customMatchers = {
   },
 
   /**
+   * Asserts that no interactive actions are occluded or tap-jacked by floating/sticky layers.
+   */
+  async toHaveNoOccludedActions(page: Page, options?: LayoutAuditOptions) {
+    const inspector = new LayoutInspector(page, options);
+    const audit = await inspector.audit({ checkOcclusion: true, ...options });
+
+    const pass = audit.occlusionIssues.length === 0;
+    const message = () => {
+      if (pass) {
+        return `Expected page to have occluded interactive elements, but all buttons/inputs were accessible.`;
+      }
+      const issueSummary = audit.occlusionIssues
+        .map(i => `  - ${i.selector} (occluded by: ${i.occludedBySelector}, ratio: ${Math.round(i.occludedAreaRatio * 100)}%)`)
+        .join('\n');
+      return `Expected all interactive elements to be clickable, but found ${audit.occlusionIssues.length} occluded action(s):\n${issueSummary}`;
+    };
+
+    return {
+      pass,
+      message,
+      name: 'toHaveNoOccludedActions'
+    };
+  },
+
+  /**
+   * Asserts that no sibling elements or text labels collide with overlapping coordinates.
+   */
+  async toHaveNoElementCollisions(page: Page, options?: LayoutAuditOptions) {
+    const inspector = new LayoutInspector(page, options);
+    const audit = await inspector.audit({ checkCollisions: true, ...options });
+
+    const pass = audit.collisionIssues.length === 0;
+    const message = () => {
+      if (pass) {
+        return `Expected page to have element collisions, but none were detected.`;
+      }
+      const issueSummary = audit.collisionIssues
+        .map(i => `  - ${i.selectorA} collides with ${i.selectorB} (overlap: ${Math.round(i.overlapAreaPx)}px²)`)
+        .join('\n');
+      return `Expected no element collisions, but found ${audit.collisionIssues.length} colliding pair(s):\n${issueSummary}`;
+    };
+
+    return {
+      pass,
+      message,
+      name: 'toHaveNoElementCollisions'
+    };
+  },
+
+  /**
+   * Asserts that no nested containers trap scrolling on mobile viewports.
+   */
+  async toHaveNoNestedScrollTraps(page: Page, options?: LayoutAuditOptions) {
+    const inspector = new LayoutInspector(page, options);
+    const audit = await inspector.audit({ checkScrollTraps: true, ...options });
+
+    const criticalTraps = audit.scrollTrapIssues.filter(t => t.isTrapRisk);
+    const pass = criticalTraps.length === 0;
+    const message = () => {
+      if (pass) {
+        return `Expected page to have nested scroll traps, but none were detected.`;
+      }
+      const issueSummary = criticalTraps
+        .map(i => `  - ${i.selector} (${i.suggestion})`)
+        .join('\n');
+      return `Expected no nested scroll traps, but found ${criticalTraps.length} trapping container(s):\n${issueSummary}`;
+    };
+
+    return {
+      pass,
+      message,
+      name: 'toHaveNoNestedScrollTraps'
+    };
+  },
+
+  /**
+   * Asserts that all interactive buttons and inputs have accessible names (aria-label, title, or text).
+   */
+  async toHaveAccessibleInteractiveNames(page: Page, options?: LayoutAuditOptions) {
+    const inspector = new LayoutInspector(page, options);
+    const audit = await inspector.audit({ checkAccessibleNames: true, ...options });
+
+    const pass = audit.accessibleNameIssues.length === 0;
+    const message = () => {
+      if (pass) {
+        return `Expected interactive elements to be missing accessible names, but all were labeled.`;
+      }
+      const issueSummary = audit.accessibleNameIssues
+        .map(i => `  - ${i.selector} (<${i.tagName}>, icon-only: ${i.isIconOnly})`)
+        .join('\n');
+      return `Expected all interactive buttons/links to have accessible names, but found ${audit.accessibleNameIssues.length} unlabeled element(s):\n${issueSummary}`;
+    };
+
+    return {
+      pass,
+      message,
+      name: 'toHaveAccessibleInteractiveNames'
+    };
+  },
+
+  /**
+   * Asserts that page reflows cleanly without horizontal scrolling at 200% text zoom (WCAG 1.4.10).
+   */
+  async toPass200PercentZoomReflow(page: Page, zoomFactor = 2.0) {
+    const inspector = new LayoutInspector(page);
+    const reflow = await inspector.test200PercentZoomReflow(zoomFactor);
+
+    const pass = reflow.passesReflow;
+    const message = () => {
+      if (pass) {
+        return `Expected page to fail 200% zoom reflow, but page reflowed cleanly.`;
+      }
+      return `Page failed WCAG 1.4.10 Reflow at ${Math.round(zoomFactor * 100)}% zoom:\n${reflow.issues.map(i => `  - ${i}`).join('\n')}`;
+    };
+
+    return {
+      pass,
+      message,
+      name: 'toPass200PercentZoomReflow'
+    };
+  },
+
+  /**
    * Asserts that an asynchronous action does not introduce jarring layout shifts.
    */
   async toHaveAcceptableLayoutShift(
@@ -121,7 +244,8 @@ export const customMatchers = {
         `  - Overflow & Fit: ${audit.uxScore.categories.overflowAndFit.score}/${audit.uxScore.categories.overflowAndFit.maxScore}\n` +
         `  - Stability: ${audit.uxScore.categories.stability.score}/${audit.uxScore.categories.stability.maxScore}\n` +
         `  - Touch Ergonomics: ${audit.uxScore.categories.touchErgonomics.score}/${audit.uxScore.categories.touchErgonomics.maxScore}\n` +
-        `  - Readability: ${audit.uxScore.categories.readabilityAndVisibility.score}/${audit.uxScore.categories.readabilityAndVisibility.maxScore}`;
+        `  - Readability & Visibility: ${audit.uxScore.categories.readabilityAndVisibility.score}/${audit.uxScore.categories.readabilityAndVisibility.maxScore}\n` +
+        `  - Accessibility & Focus: ${audit.uxScore.categories.accessibilityAndFocus.score}/${audit.uxScore.categories.accessibilityAndFocus.maxScore}`;
     };
 
     return {
@@ -141,6 +265,11 @@ declare global {
       toHaveNoLayoutOverflow(options?: LayoutAuditOptions): Promise<R>;
       toHaveMobileFit(options?: LayoutAuditOptions): Promise<R>;
       toHaveTouchFriendlyTargets(options?: { minSize?: number }): Promise<R>;
+      toHaveNoOccludedActions(options?: LayoutAuditOptions): Promise<R>;
+      toHaveNoElementCollisions(options?: LayoutAuditOptions): Promise<R>;
+      toHaveNoNestedScrollTraps(options?: LayoutAuditOptions): Promise<R>;
+      toHaveAccessibleInteractiveNames(options?: LayoutAuditOptions): Promise<R>;
+      toPass200PercentZoomReflow(zoomFactor?: number): Promise<R>;
       toHaveAcceptableLayoutShift(
         action: () => Promise<void>,
         options?: { maxAcceptableScore?: number; maxAcceptableDisplacement?: number }

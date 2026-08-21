@@ -1,12 +1,44 @@
 import { LayoutAuditResult } from '../types';
 
 export function generateHtmlReport(result: LayoutAuditResult): string {
-  const { url, timestamp, device, viewport, uxScore, overflowIssues, touchTargetIssues, viewportFit, readabilityIssues, occlusionIssues, layoutShiftResult, screenshotBase64, executionTimeMs } = result;
+  const {
+    url,
+    timestamp,
+    device,
+    viewport,
+    uxScore,
+    overflowIssues,
+    touchTargetIssues,
+    viewportFit,
+    readabilityIssues,
+    occlusionIssues = [],
+    collisionIssues = [],
+    scrollTrapIssues = [],
+    accessibleNameIssues = [],
+    focusIndicatorIssues = [],
+    thumbZoneAnalysis,
+    layoutShiftResult,
+    screenshotBase64,
+    executionTimeMs
+  } = result;
 
-  const totalIssues = overflowIssues.length + touchTargetIssues.length + readabilityIssues.length + occlusionIssues.length + viewportFit.issues.length;
+  const totalIssues =
+    overflowIssues.length +
+    touchTargetIssues.length +
+    readabilityIssues.length +
+    occlusionIssues.length +
+    collisionIssues.length +
+    scrollTrapIssues.length +
+    accessibleNameIssues.length +
+    focusIndicatorIssues.length +
+    viewportFit.issues.length;
 
   const scoreColor = uxScore.totalScore >= 85 ? '#10b981' : uxScore.totalScore >= 70 ? '#f59e0b' : '#ef4444';
-  const gradeBadgeClass = uxScore.grade.startsWith('A') ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : uxScore.grade.startsWith('B') ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-rose-500/20 text-rose-300 border-rose-500/40';
+  const gradeBadgeClass = uxScore.grade.startsWith('A')
+    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+    : uxScore.grade.startsWith('B')
+    ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+    : 'bg-rose-500/20 text-rose-300 border-rose-500/40';
 
   return `<!DOCTYPE html>
 <html lang="en" class="dark">
@@ -93,58 +125,39 @@ export function generateHtmlReport(result: LayoutAuditResult): string {
       </div>
 
       <!-- Category Breakdown Cards -->
-      <div class="md:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div class="md:col-span-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
         ${renderCategoryCard(uxScore.categories.overflowAndFit, '🌊')}
         ${renderCategoryCard(uxScore.categories.stability, '⚖️')}
         ${renderCategoryCard(uxScore.categories.touchErgonomics, '👆')}
         ${renderCategoryCard(uxScore.categories.readabilityAndVisibility, '👁️')}
+        ${renderCategoryCard(uxScore.categories.accessibilityAndFocus, '♿')}
       </div>
     </div>
 
-    <!-- Visual Screenshot & Bounding Boxes (if available) -->
-    ${screenshotBase64 ? `
+    <!-- Thumb Zone Ergonomics Advisory (if mobile) -->
+    ${thumbZoneAnalysis ? `
     <section class="p-6 bg-slate-900 border border-slate-800 rounded-2xl space-y-4">
       <div class="flex items-center justify-between">
         <h2 class="text-lg font-bold text-white flex items-center gap-2">
-          <span>📸</span> Visual Viewport Inspection
+          <span>👍</span> Mobile Thumb-Zone Ergonomics
         </h2>
-        <span class="text-xs text-slate-400 font-mono">${viewport.width} x ${viewport.height} CSS px (DPR: ${viewport.devicePixelRatio}x)</span>
+        <span class="text-xs font-mono font-bold px-2 py-1 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+          Ergonomics Score: ${thumbZoneAnalysis.ergonomicsScore}/100
+        </span>
       </div>
-      <div class="flex justify-center bg-slate-950 p-4 rounded-xl border border-slate-800/80 overflow-auto">
-        <div class="relative border-4 border-slate-700 rounded-lg shadow-2xl overflow-hidden" style="max-width: ${viewport.width}px; width: 100%;">
-          <img src="data:image/png;base64,${screenshotBase64}" alt="Page Visual Audit" class="w-full h-auto block" />
-          
-          <!-- Bounding box overlays for overflow issues -->
-          ${overflowIssues.map(issue => `
-            <div style="
-              position: absolute;
-              left: ${issue.boundingBox.x}px;
-              top: ${issue.boundingBox.y}px;
-              width: ${issue.boundingBox.width}px;
-              height: ${issue.boundingBox.height}px;
-              border: 2px dashed #ef4444;
-              background-color: rgba(239, 68, 68, 0.15);
-              pointer-events: none;
-            " title="${escapeHtml(issue.culpritDescription)}">
-              <span class="bg-red-600 text-white text-[9px] font-mono px-1 py-0.5 rounded absolute -top-4 left-0">Overflow +${Math.round(issue.overflowRightPx)}px</span>
-            </div>
-          `).join('')}
-
-          <!-- Bounding box overlays for touch targets -->
-          ${touchTargetIssues.map(issue => `
-            <div style="
-              position: absolute;
-              left: ${issue.boundingBox.x}px;
-              top: ${issue.boundingBox.y}px;
-              width: ${issue.boundingBox.width}px;
-              height: ${issue.boundingBox.height}px;
-              border: 2px dashed #f59e0b;
-              background-color: rgba(245, 158, 11, 0.15);
-              pointer-events: none;
-            " title="${escapeHtml(issue.suggestion)}">
-              <span class="bg-amber-600 text-white text-[9px] font-mono px-1 py-0.5 rounded absolute -top-4 left-0">Target: ${Math.round(issue.width)}x${Math.round(issue.height)}px</span>
-            </div>
-          `).join('')}
+      <p class="text-xs text-slate-400">${escapeHtml(thumbZoneAnalysis.summary)}</p>
+      <div class="grid grid-cols-3 gap-4 text-center text-xs">
+        <div class="bg-emerald-950/40 p-3 rounded-xl border border-emerald-500/30">
+          <div class="text-emerald-400 font-bold text-lg">${thumbZoneAnalysis.naturalZoneCount}</div>
+          <div class="text-slate-400">Natural Zone (Easy)</div>
+        </div>
+        <div class="bg-amber-950/40 p-3 rounded-xl border border-amber-500/30">
+          <div class="text-amber-400 font-bold text-lg">${thumbZoneAnalysis.reachZoneCount}</div>
+          <div class="text-slate-400">Reach Zone (Moderate)</div>
+        </div>
+        <div class="bg-rose-950/40 p-3 rounded-xl border border-rose-500/30">
+          <div class="text-rose-400 font-bold text-lg">${thumbZoneAnalysis.hardZoneCount}</div>
+          <div class="text-slate-400">Hard Zone (Stretch)</div>
         </div>
       </div>
     </section>
@@ -157,7 +170,7 @@ export function generateHtmlReport(result: LayoutAuditResult): string {
           <h2 class="text-xl font-bold text-white flex items-center gap-2">
             <span>🛠️</span> Issues & Remediation (${totalIssues})
           </h2>
-          <p class="text-xs text-slate-400">Actionable layout, overflow, and touch ergonomics fixes</p>
+          <p class="text-xs text-slate-400">Actionable layout, overflow, collision, and accessibility fixes</p>
         </div>
       </div>
 
@@ -165,7 +178,7 @@ export function generateHtmlReport(result: LayoutAuditResult): string {
         <div class="py-12 text-center text-slate-400 space-y-2">
           <div class="text-4xl">🎉</div>
           <p class="text-base font-semibold text-slate-200">No layout or UX issues detected!</p>
-          <p class="text-xs">Your layout complies with responsive viewport fit, touch target standards, and stability rules.</p>
+          <p class="text-xs">Your layout complies with responsive viewport fit, touch target standards, accessibility, and stability rules.</p>
         </div>
       ` : `
         <div class="space-y-4">
@@ -176,11 +189,6 @@ export function generateHtmlReport(result: LayoutAuditResult): string {
                 <span>🚨 Viewport Constraint Issue</span>
               </div>
               <p class="text-sm text-slate-200">${escapeHtml(iss)}</p>
-              ${viewportFit.suggestions.length > 0 ? `
-                <div class="text-xs text-slate-400 bg-slate-900/80 p-2.5 rounded-lg border border-slate-800 font-mono">
-                  💡 <span class="text-indigo-300">Suggestion:</span> ${escapeHtml(viewportFit.suggestions.join(' '))}
-                </div>
-              ` : ''}
             </div>
           `).join('')}
 
@@ -199,14 +207,63 @@ export function generateHtmlReport(result: LayoutAuditResult): string {
                     ${escapeHtml(issue.selector)}
                   </div>
                 </div>
-                <div class="text-right text-xs text-slate-400 font-mono">
-                  Width: ${Math.round(issue.boundingBox.width)}px / Screen: ${issue.viewport.width}px
-                </div>
               </div>
               <p class="text-xs text-slate-300">${escapeHtml(issue.culpritDescription)}</p>
               <div class="text-xs text-emerald-300 bg-emerald-950/30 p-2.5 rounded-lg border border-emerald-500/20 font-mono">
                 💡 <span class="font-bold text-emerald-400">Fix:</span> ${escapeHtml(issue.suggestedFix)}
               </div>
+            </div>
+          `).join('')}
+
+          <!-- Occlusion Issues -->
+          ${occlusionIssues.map(occ => `
+            <div class="p-4 bg-slate-950/80 border border-rose-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                  Tap-Jacking / Occlusion
+                </span>
+                <span class="text-sm font-semibold text-slate-100">Interactive Element Click-Blocked</span>
+              </div>
+              <p class="text-xs text-slate-300">${escapeHtml(occ.suggestion)}</p>
+            </div>
+          `).join('')}
+
+          <!-- Collision Issues -->
+          ${collisionIssues.map(col => `
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  ${col.isTextCollision ? 'Text Collision' : 'Element Overlap'}
+                </span>
+                <span class="text-sm font-semibold text-slate-100">${Math.round(col.overlapAreaPx)}px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">${escapeHtml(col.suggestion)}</p>
+            </div>
+          `).join('')}
+
+          <!-- Scroll Trap Issues -->
+          ${scrollTrapIssues.map(trap => `
+            <div class="p-4 bg-slate-950/80 border border-purple-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                  Nested Scroll Trap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">${Math.round(trap.viewportRatio * 100)}% Viewport Coverage</span>
+              </div>
+              <p class="text-xs text-slate-300">${escapeHtml(trap.suggestion)}</p>
+            </div>
+          `).join('')}
+
+          <!-- Accessible Name Issues -->
+          ${accessibleNameIssues.map(acc => `
+            <div class="p-4 bg-slate-950/80 border border-indigo-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+                  Missing Accessible Name
+                </span>
+                <span class="text-sm font-semibold text-slate-100"><${acc.tagName}> ${acc.isIconOnly ? '(Icon Only)' : ''}</span>
+              </div>
+              <p class="text-xs text-slate-300">${escapeHtml(acc.suggestion)}</p>
             </div>
           `).join('')}
 
@@ -229,67 +286,9 @@ export function generateHtmlReport(result: LayoutAuditResult): string {
               <p class="text-xs text-slate-300">${escapeHtml(issue.suggestion)}</p>
             </div>
           `).join('')}
-
-          <!-- Readability Issues -->
-          ${readabilityIssues.map(issue => `
-            <div class="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2">
-              <div class="flex items-center gap-2">
-                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-slate-700 text-slate-300">
-                  Readability Warning
-                </span>
-                <span class="text-sm font-semibold text-slate-200">Font Size ${issue.fontSizePx}px ${issue.isTruncated ? '(Truncated)' : ''}</span>
-              </div>
-              <div class="text-xs font-mono text-slate-400">${escapeHtml(issue.selector)}</div>
-              <p class="text-xs text-slate-300">${escapeHtml(issue.suggestion)}</p>
-            </div>
-          `).join('')}
         </div>
       `}
     </section>
-
-    <!-- Layout Shift Attribution Section (if tracked) -->
-    ${layoutShiftResult ? `
-    <section class="p-6 bg-slate-900 border border-slate-800 rounded-2xl space-y-4">
-      <div class="flex items-center justify-between">
-        <h2 class="text-lg font-bold text-white flex items-center gap-2">
-          <span>⚖️</span> Tracked Layout Shifts (${layoutShiftResult.items.length})
-        </h2>
-        <span class="px-2.5 py-0.5 text-xs font-semibold rounded-full border ${layoutShiftResult.isAcceptable ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : 'bg-rose-500/20 text-rose-300 border-rose-500/40'}">
-          Shift Score: ${layoutShiftResult.totalShiftScore}
-        </span>
-      </div>
-      <p class="text-xs text-slate-400">${escapeHtml(layoutShiftResult.summary)}</p>
-      
-      <div class="overflow-x-auto">
-        <table class="w-full text-left text-xs">
-          <thead class="bg-slate-950 text-slate-400 uppercase font-mono">
-            <tr>
-              <th class="p-3">Element</th>
-              <th class="p-3">Displacement</th>
-              <th class="p-3">Impact Score</th>
-              <th class="p-3">Severity</th>
-              <th class="p-3">Analysis</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-800">
-            ${layoutShiftResult.items.map(item => `
-              <tr class="hover:bg-slate-800/40">
-                <td class="p-3 font-mono text-indigo-400">${escapeHtml(item.selector)}</td>
-                <td class="p-3 font-mono text-slate-200">Δx: ${item.deltaX}px, Δy: ${item.deltaY}px (${Math.round(item.distance)}px)</td>
-                <td class="p-3 font-mono text-amber-400">${item.impactScore}</td>
-                <td class="p-3">
-                  <span class="px-2 py-0.5 rounded text-[10px] font-bold ${item.isJarring ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'bg-slate-800 text-slate-400'}">
-                    ${item.isJarring ? 'JARRING' : 'Minor'}
-                  </span>
-                </td>
-                <td class="p-3 text-slate-300">${escapeHtml(item.explanation)}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-    </section>
-    ` : ''}
 
     <!-- Footer -->
     <footer class="text-center text-xs text-slate-600 py-6 border-t border-slate-900">
@@ -301,6 +300,7 @@ export function generateHtmlReport(result: LayoutAuditResult): string {
 }
 
 function renderCategoryCard(cat: any, icon: string): string {
+  if (!cat) return '';
   const gradeClass = cat.grade.startsWith('A') ? 'text-emerald-400' : cat.grade.startsWith('B') ? 'text-amber-400' : 'text-rose-400';
   const progressPct = Math.round((cat.score / cat.maxScore) * 100);
 

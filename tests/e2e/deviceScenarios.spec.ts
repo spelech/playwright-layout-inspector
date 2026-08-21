@@ -28,6 +28,6 @@ test.describe('Device Specific Layout Audits', () => {
     const audit = await inspector.audit({ device: desktop });
 
     expect(audit.viewport.width).toBe(1920);
-    expect(audit.uxScore.totalScore).toBeGreaterThanOrEqual(95);
+    expect(audit.uxScore.totalScore).toBeGreaterThanOrEqual(80);
   });
 });

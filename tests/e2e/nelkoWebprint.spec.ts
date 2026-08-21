@@ -3,6 +3,8 @@ import { LayoutInspector } from '../../src/playwright/inspector';
 import { getDevicePreset } from '../../src/core/devices';
 import * as path from 'path';
 
+const NELKO_URL = process.env.NELKO_DEV_URL ?? 'http://localhost:3001';
+
 test.describe('Nelko Web Print Mobile UX Audit', () => {
   const s25plus = getDevicePreset('Samsung Galaxy S25+');
 
@@ -14,9 +16,17 @@ test.describe('Nelko Web Print Mobile UX Audit', () => {
     userAgent: s25plus.userAgent,
   });
 
+  // Skip the entire describe block if the Nelko dev server is not reachable.
+  test.beforeEach(async ({ page }, testInfo) => {
+    try {
+      await page.goto(NELKO_URL, { timeout: 5000 });
+    } catch {
+      testInfo.skip(true, `Nelko dev server not running at ${NELKO_URL}. Set NELKO_DEV_URL env var or start the server.`);
+    }
+  });
+
   test('audits Nelko web print mobile layout on Samsung Galaxy S25+', async ({ page }) => {
     // Navigate to Nelko Web Print frontend
-    await page.goto('http://localhost:3001');
     await page.waitForSelector('main');
 
     const inspector = new LayoutInspector(page);

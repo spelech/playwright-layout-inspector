@@ -1,16 +1,22 @@
 import type { Page } from '@playwright/test';
 import {
+  AccessibleNameIssue,
   BoundingBox,
   DevicePreset,
+  ElementCollisionIssue,
   ElementComputedStyles,
+  FocusIndicatorIssue,
   LayoutAuditOptions,
   LayoutAuditResult,
   LayoutShiftResult,
   OcclusionIssue,
   OverflowIssue,
   ReadabilityIssue,
+  ScrollTrapIssue,
+  ThumbZoneAnalysis,
   TouchTargetIssue,
-  ViewportFitResult
+  ViewportFitResult,
+  ZoomReflowResult
 } from '../types';
 import { getDevicePreset } from '../core/devices';
 import { calculateOverflow, generateOverflowRemediation } from '../core/overflow';
@@ -18,6 +24,12 @@ import { computeElementDisplacement, evaluateLayoutShift, ElementSnapshot } from
 import { evaluateViewportFit } from '../core/viewportFit';
 import { evaluateTouchTarget } from '../core/touchTargets';
 import { evaluateTextReadability } from '../core/readability';
+import { evaluateElementOcclusion } from '../core/occlusion';
+import { evaluateElementCollisions } from '../core/collisions';
+import { evaluateScrollTrap } from '../core/scrollTraps';
+import { evaluateAccessibleName, evaluateFocusIndicator } from '../core/accessibility';
+import { evaluateThumbZoneErgonomics } from '../core/ergonomics';
+import { evaluateZoomReflow } from '../core/zoomReflow';
 import { computeUXScore } from '../core/score';
 import { collectInPageAuditScript } from '../core/browserScript';
 import { generateHtmlReport } from '../reporter/htmlReporter';
@@ -44,6 +56,11 @@ export class LayoutInspector {
       checkViewportFit: true,
       checkReadability: true,
       checkOcclusion: true,
+      checkCollisions: true,
+      checkScrollTraps: true,
+      checkAccessibleNames: true,
+      checkFocusIndicators: true,
+      checkThumbZones: true,
       minTouchTargetSize: 24,
       minFontSizePx: 12,
       includeScreenshot: true,
@@ -101,8 +118,8 @@ export class LayoutInspector {
 
     // 3. Touch Targets Evaluation
     const touchTargetIssues: TouchTargetIssue[] = [];
+    const interactiveElements = inPageData.elements.filter(e => e.isInteractive);
     if (mergedOptions.checkTouchTargets !== false) {
-      const interactiveElements = inPageData.elements.filter(e => e.isInteractive);
       const allTargets = interactiveElements.map(e => ({ selector: e.selector, boundingBox: e.rect }));
 
       for (const el of interactiveElements) {
@@ -152,39 +169,167 @@ export class LayoutInspector {
       }
     }
 
-    // 5. Occlusion Issues
+    // 5. Multi-Point Occlusion Issues
     const occlusionIssues: OcclusionIssue[] = [];
     if (mergedOptions.checkOcclusion !== false) {
       for (const occ of inPageData.occlusions) {
-        occlusionIssues.push({
-          selector: occ.selector,
-          occludedBySelector: occ.occludedBySelector,
-          occludedAreaRatio: occ.occludedAreaRatio,
-          isInteractive: occ.isInteractive,
-          severity: 'critical',
-          suggestion: `Element ${occ.selector} is visually occluded by floating/fixed layer ${occ.occludedBySelector}, preventing user interaction.`
-        });
+        const target = inPageData.elements.find(e => e.selector === occ.selector);
+        if (target) {
+          const issue = evaluateElementOcclusion(
+            {
+              selector: target.selector,
+              tagName: target.tagName,
+              boundingBox: target.rect,
+              isInteractive: target.isInteractive
+            },
+            occ.raycastResults
+          );
+          if (issue) {
+            occlusionIssues.push(issue);
+          }
+        }
       }
     }
 
-    // 6. Screenshot capture
+    // 6. Element & Text 2D Collisions
+    let collisionIssues: ElementCollisionIssue[] = [];
+    if (mergedOptions.checkCollisions !== false) {
+      collisionIssues = evaluateElementCollisions(
+        inPageData.elements.map(e => ({
+          selector: e.selector,
+          tagName: e.tagName,
+          textSnippet: e.textSnippet,
+          rect: e.rect,
+          isInteractive: e.isInteractive,
+          isTextOnly: e.isTextOnly,
+          ancestors: e.ancestors
+        }))
+      );
+    }
+
+    // 7. Nested Scroll Traps
+    const scrollTrapIssues: ScrollTrapIssue[] = [];
+    if (mergedOptions.checkScrollTraps !== false) {
+      for (const el of inPageData.elements) {
+        const trap = evaluateScrollTrap(
+          {
+            selector: el.selector,
+            tagName: el.tagName,
+            scrollHeight: el.scrollHeight,
+            clientHeight: el.clientHeight,
+            scrollWidth: el.scrollWidth,
+            clientWidth: el.clientWidth,
+            overflowY: el.computedStyles.overflowY,
+            overflowX: el.computedStyles.overflowX
+          },
+          viewport
+        );
+        if (trap) {
+          scrollTrapIssues.push(trap);
+        }
+      }
+    }
+
+    // 8. Accessible Interactive Names
+    const accessibleNameIssues: AccessibleNameIssue[] = [];
+    if (mergedOptions.checkAccessibleNames !== false) {
+      for (const el of inPageData.elements) {
+        const issue = evaluateAccessibleName({
+          selector: el.selector,
+          tagName: el.tagName,
+          role: el.role,
+          ariaLabel: el.ariaLabel,
+          ariaLabelledBy: el.ariaLabelledBy,
+          title: el.title,
+          innerText: el.textSnippet,
+          hasSvgOrImgChild: el.hasSvgOrImgChild
+        });
+        if (issue) {
+          accessibleNameIssues.push(issue);
+        }
+      }
+    }
+
+    // 9. Focus Ring Visibility — programmatically focus each element and measure computed style
+    const focusIndicatorIssues: FocusIndicatorIssue[] = [];
+    if (mergedOptions.checkFocusIndicators !== false) {
+      for (const el of interactiveElements) {
+        // Use Playwright to focus the element and read computed focus style at that moment.
+        // This correctly handles :focus-visible, :focus, and CSS class-based focus rings.
+        const focusData = await this.page.evaluate((selector: string) => {
+          const el = document.querySelector(selector) as HTMLElement | null;
+          if (!el) return null;
+          el.focus({ preventScroll: true });
+          const comp = window.getComputedStyle(el);
+          const result = {
+            outlineWidth: comp.outlineWidth,
+            outlineStyle: comp.outlineStyle,
+            outlineColor: comp.outlineColor,
+            boxShadow: comp.boxShadow
+          };
+          el.blur();
+          return result;
+        }, el.selector);
+
+        if (!focusData) continue;
+
+        const issue = evaluateFocusIndicator({
+          selector: el.selector,
+          tagName: el.tagName,
+          outlineWidth: focusData.outlineWidth || '0px',
+          outlineStyle: focusData.outlineStyle || 'none',
+          outlineColor: focusData.outlineColor || 'transparent',
+          boxShadow: focusData.boxShadow || 'none',
+          isFocused: true
+        });
+        if (issue) {
+          focusIndicatorIssues.push(issue);
+        }
+      }
+    }
+
+    // 10. Mobile Thumb-Zone Ergonomics
+    let thumbZoneAnalysis: ThumbZoneAnalysis | undefined;
+    if (mergedOptions.checkThumbZones !== false) {
+      thumbZoneAnalysis = evaluateThumbZoneErgonomics(
+        interactiveElements.map(e => ({
+          selector: e.selector,
+          textSnippet: e.textSnippet,
+          rect: e.rect
+        })),
+        viewport
+      );
+    }
+
+    // 11. 200% Zoom Reflow (Optional)
+    let zoomReflowResult: ZoomReflowResult | undefined;
+    if (mergedOptions.test200PercentZoomReflow) {
+      zoomReflowResult = await this.test200PercentZoomReflow();
+    }
+
+    // 12. Screenshot capture
     let screenshotBase64: string | undefined;
     if (mergedOptions.includeScreenshot) {
       try {
         const buffer = await this.page.screenshot({ fullPage: false });
         screenshotBase64 = buffer.toString('base64');
       } catch {
-        // Screenshot capture failed or not supported in mock
+        // Screenshot capture not supported or skipped
       }
     }
 
-    // 7. Compute UX Score
+    // 13. Compute UX Score
     const uxScore = computeUXScore({
       overflowIssues,
       viewportFit,
       touchTargetIssues,
       readabilityIssues,
-      occlusionIssues
+      occlusionIssues,
+      collisionIssues,
+      scrollTrapIssues,
+      accessibleNameIssues,
+      focusIndicatorIssues,
+      thumbZoneAnalysis
     });
 
     let devicePreset: DevicePreset | undefined;
@@ -203,9 +348,53 @@ export class LayoutInspector {
       viewportFit,
       readabilityIssues,
       occlusionIssues,
+      collisionIssues,
+      scrollTrapIssues,
+      accessibleNameIssues,
+      focusIndicatorIssues,
+      thumbZoneAnalysis,
+      zoomReflowResult,
       screenshotBase64,
       executionTimeMs: Date.now() - startTime
     };
+  }
+
+  /**
+   * Test WCAG 1.4.10 Reflow at 200% zoom.
+   */
+  async test200PercentZoomReflow(zoomFactor = 2.0): Promise<ZoomReflowResult> {
+    const originalFontSize = await this.page.evaluate(() => {
+      const current = document.documentElement.style.fontSize;
+      document.documentElement.style.fontSize = '200%';
+      return current;
+    });
+
+    await this.page.waitForTimeout(200);
+
+    const data = await this.page.evaluate(collectInPageAuditScript, '{}');
+    const collisions = evaluateElementCollisions(
+      data.elements.map(e => ({
+        selector: e.selector,
+        tagName: e.tagName,
+        textSnippet: e.textSnippet,
+        rect: e.rect,
+        isInteractive: e.isInteractive,
+        isTextOnly: e.isTextOnly,
+        ancestors: e.ancestors
+      }))
+    );
+
+    // Restore original font size
+    await this.page.evaluate((orig) => {
+      document.documentElement.style.fontSize = orig || '';
+    }, originalFontSize);
+
+    return evaluateZoomReflow({
+      pageScrollWidth: data.viewport.scrollWidth,
+      windowWidth: data.viewport.width,
+      collisionCount: collisions.length,
+      zoomFactor
+    });
   }
 
   /**
@@ -229,7 +418,7 @@ export class LayoutInspector {
     // Perform action
     await action();
 
-    // Small delay to allow CSS transitions / DOM reflows to settle
+    // Delay to allow CSS transitions to settle
     await this.page.waitForTimeout(200);
 
     // Capture after snapshot
