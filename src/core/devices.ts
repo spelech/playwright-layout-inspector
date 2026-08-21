@@ -94,17 +94,19 @@ export const DEVICE_PRESETS: Record<string, DevicePreset> = {
 };
 
 export function getDevicePreset(nameOrDevice: string | DevicePreset): DevicePreset {
-  if (typeof nameOrDevice === 'object' && nameOrDevice.name && nameOrDevice.width && nameOrDevice.height) {
+  if (typeof nameOrDevice === 'object' && nameOrDevice !== null && 'name' in nameOrDevice && 'width' in nameOrDevice && 'height' in nameOrDevice) {
     return nameOrDevice;
   }
-  const match = DEVICE_PRESETS[nameOrDevice];
-  if (match) return match;
+  if (typeof nameOrDevice === 'string') {
+    const match = DEVICE_PRESETS[nameOrDevice];
+    if (match) return match;
 
-  // Case-insensitive lookup or partial matching
-  const lower = nameOrDevice.toLowerCase();
-  for (const [key, val] of Object.entries(DEVICE_PRESETS)) {
-    if (key.toLowerCase() === lower || key.toLowerCase().includes(lower)) {
-      return val;
+    // Case-insensitive lookup or partial matching
+    const lower = nameOrDevice.toLowerCase();
+    for (const [key, val] of Object.entries(DEVICE_PRESETS)) {
+      if (key.toLowerCase() === lower || key.toLowerCase().includes(lower)) {
+        return val;
+      }
     }
   }
 
