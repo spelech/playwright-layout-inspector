@@ -61,6 +61,16 @@ describe('HTML Reporter', () => {
             passed: true,
             issueCount: 1,
             summary: '1 readability warning'
+          },
+          accessibilityAndFocus: {
+            name: 'Accessibility & Keyboard Navigation',
+            score: 15,
+            weight: 15,
+            maxScore: 15,
+            grade: 'A+',
+            passed: true,
+            issueCount: 0,
+            summary: 'Accessible names on all icon buttons and visible keyboard focus rings.'
           }
         }
       },
@@ -100,6 +110,10 @@ describe('HTML Reporter', () => {
       },
       readabilityIssues: [],
       occlusionIssues: [],
+      collisionIssues: [],
+      scrollTrapIssues: [],
+      accessibleNameIssues: [],
+      focusIndicatorIssues: [],
       executionTimeMs: 120
     };
 
