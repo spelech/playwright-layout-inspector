@@ -148,7 +148,11 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
     const isInput = ['input', 'select', 'textarea'].includes(tag);
     const hasCursorPointer = comp.cursor === 'pointer';
     const hasExplicitClickHandler = el.hasAttribute('onclick') || typeof (el as any).onclick === 'function';
-    const isInteractive = isButton || isLink || isInput || (hasCursorPointer && ['div', 'span', 'button', 'a', 'li', 'svg'].includes(tag)) || hasExplicitClickHandler;
+    
+    // Check if element is inside an outer interactive container (e.g. svg inside a button)
+    const interactiveAncestor = el.parentElement ? el.parentElement.closest('button, a[href], [role="button"], [role="tab"]') : null;
+    const isDirectInteractive = isButton || isLink || isInput || hasExplicitClickHandler || (hasCursorPointer && ['div', 'span', 'li'].includes(tag));
+    const isInteractive = isDirectInteractive && !interactiveAncestor;
 
     const textContent = (el.textContent || '').trim().replace(/\s+/g, ' ');
     const textSnippet = textContent.length > 60 ? textContent.substring(0, 57) + '...' : textContent;
