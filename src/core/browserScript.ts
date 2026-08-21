@@ -84,7 +84,7 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
         }
         if (current.className && typeof current.className === 'string' && current.className.trim()) {
           const firstClass = current.className.trim().split(/\s+/)[0];
-          if (firstClass && !firstClass.includes(':') && !firstClass.includes('/')) {
+          if (firstClass && !firstClass.includes(':') && !firstClass.includes('/') && !firstClass.includes('[')) {
             selector += `.${CSS.escape(firstClass)}`;
           }
         }
@@ -102,14 +102,17 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
   const metaEl = document.querySelector('meta[name="viewport"]');
   const metaViewport = metaEl ? metaEl.getAttribute('content') : null;
 
+  const vpWidth = window.visualViewport ? window.visualViewport.width : (document.documentElement.clientWidth || window.innerWidth);
+  const vpHeight = window.visualViewport ? window.visualViewport.height : (document.documentElement.clientHeight || window.innerHeight);
+
   const vp = {
-    width: window.innerWidth,
-    height: window.innerHeight,
+    width: Math.round(vpWidth * 100) / 100,
+    height: Math.round(vpHeight * 100) / 100,
     devicePixelRatio: window.devicePixelRatio || 1,
     scrollX: window.scrollX,
     scrollY: window.scrollY,
-    scrollWidth: document.documentElement.scrollWidth,
-    scrollHeight: document.documentElement.scrollHeight,
+    scrollWidth: Math.max(document.documentElement.scrollWidth, document.body ? document.body.scrollWidth : 0),
+    scrollHeight: Math.max(document.documentElement.scrollHeight, document.body ? document.body.scrollHeight : 0),
     metaViewport
   };
 
@@ -119,7 +122,7 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
   for (const el of allElements) {
     // Skip scripts, styles, svgs internals, noscript
     const tag = el.tagName.toLowerCase();
-    if (['script', 'style', 'noscript', 'path', 'g', 'defs', 'clippath', 'symbol', 'use'].includes(tag)) {
+    if (['script', 'style', 'noscript', 'path', 'g', 'defs', 'clippath', 'symbol', 'use', 'br', 'hr'].includes(tag)) {
       continue;
     }
 
@@ -129,7 +132,7 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
     }
 
     const rect = el.getBoundingClientRect();
-    // Skip elements that take up no space and are hidden
+    // Skip elements that take up no space
     if (rect.width <= 0 && rect.height <= 0) {
       continue;
     }
@@ -139,12 +142,13 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
       continue;
     }
 
-    const isButton = tag === 'button' || el.getAttribute('role') === 'button';
+    const role = el.getAttribute('role');
+    const isButton = tag === 'button' || role === 'button' || role === 'tab' || role === 'menuitem';
     const isLink = tag === 'a' && el.hasAttribute('href');
     const isInput = ['input', 'select', 'textarea'].includes(tag);
     const hasCursorPointer = comp.cursor === 'pointer';
-    const hasTouchHandler = el.hasAttribute('onclick') || (el as any).ontouchstart !== undefined;
-    const isInteractive = isButton || isLink || isInput || hasCursorPointer || hasTouchHandler;
+    const hasExplicitClickHandler = el.hasAttribute('onclick') || typeof (el as any).onclick === 'function';
+    const isInteractive = isButton || isLink || isInput || (hasCursorPointer && ['div', 'span', 'button', 'a', 'li', 'svg'].includes(tag)) || hasExplicitClickHandler;
 
     const textContent = (el.textContent || '').trim().replace(/\s+/g, ' ');
     const textSnippet = textContent.length > 60 ? textContent.substring(0, 57) + '...' : textContent;
