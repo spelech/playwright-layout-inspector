@@ -1,0 +1,2547 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Layout & UX Audit Report — http://10.0.0.10:3001/</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              900: '#312e81',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    code, pre { font-family: 'JetBrains Mono', monospace; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen antialiased p-4 md:p-8">
+  <div class="max-w-7xl mx-auto space-y-8">
+    
+    <!-- Top Header -->
+    <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 bg-slate-900/80 backdrop-blur border border-slate-800 rounded-2xl shadow-xl">
+      <div class="space-y-1">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center font-bold text-white shadow-lg shadow-indigo-500/30">
+            📐
+          </div>
+          <h1 class="text-2xl font-bold tracking-tight text-white">Playwright Layout Inspector</h1>
+          <span class="px-2.5 py-0.5 text-xs font-semibold rounded-full border bg-rose-500/20 text-rose-300 border-rose-500/40">
+            Grade C
+          </span>
+        </div>
+        <p class="text-sm text-slate-400 font-mono break-all">http://10.0.0.10:3001/</p>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-3 text-xs text-slate-400">
+        <div class="bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700">
+          📱 <span class="font-semibold text-slate-200">Samsung Galaxy S25+</span>
+        </div>
+        <div class="bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700">
+          ⏱️ <span class="font-semibold text-slate-200">414ms</span>
+        </div>
+        <div class="bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700">
+          📅 <span class="font-semibold text-slate-200">4:31:26 PM</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Score & Overview Hero -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+      
+      <!-- Primary UX Score Gauge -->
+      <div class="md:col-span-1 p-6 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col items-center justify-center text-center shadow-lg relative overflow-hidden">
+        <div class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-4">Overall UX Score</div>
+        <div class="relative flex items-center justify-center w-36 h-36">
+          <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+            <path class="text-slate-800" stroke-width="3.5" stroke="currentColor" fill="none"
+              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            <path stroke="#ef4444" stroke-width="3.5" stroke-dasharray="63, 100" stroke-linecap="round" fill="none"
+              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+          </svg>
+          <div class="absolute flex flex-col items-center">
+            <span class="text-4xl font-extrabold text-white">63</span>
+            <span class="text-xs font-bold text-slate-400">/ 100</span>
+          </div>
+        </div>
+        <div class="mt-4 text-xs font-medium text-slate-400">
+          <span class="text-rose-400 font-semibold">✗ Fails UX Standards</span>
+        </div>
+      </div>
+
+      <!-- Category Breakdown Cards -->
+      <div class="md:col-span-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        
+    <div class="p-5 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col justify-between space-y-3 shadow-lg">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span>🌊</span>
+          <h3 class="text-xs font-semibold text-slate-200 uppercase tracking-wider">Overflow &amp; Viewport Fit</h3>
+        </div>
+        <span class="text-sm font-extrabold text-emerald-400">22 / 25</span>
+      </div>
+      <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+        <div class="h-full bg-indigo-500 rounded-full" style="width: 88%"></div>
+      </div>
+      <p class="text-xs text-slate-400 leading-relaxed">1 overflow, 0 scroll trap issues detected.</p>
+    </div>
+  
+        
+    <div class="p-5 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col justify-between space-y-3 shadow-lg">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span>⚖️</span>
+          <h3 class="text-xs font-semibold text-slate-200 uppercase tracking-wider">Layout Stability &amp; Shifts</h3>
+        </div>
+        <span class="text-sm font-extrabold text-emerald-400">20 / 20</span>
+      </div>
+      <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+        <div class="h-full bg-indigo-500 rounded-full" style="width: 100%"></div>
+      </div>
+      <p class="text-xs text-slate-400 leading-relaxed">Visual layout is stable without jarring element jumps.</p>
+    </div>
+  
+        
+    <div class="p-5 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col justify-between space-y-3 shadow-lg">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span>👆</span>
+          <h3 class="text-xs font-semibold text-slate-200 uppercase tracking-wider">Touch Ergonomics &amp; Reachability</h3>
+        </div>
+        <span class="text-sm font-extrabold text-emerald-400">20 / 20</span>
+      </div>
+      <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+        <div class="h-full bg-indigo-500 rounded-full" style="width: 100%"></div>
+      </div>
+      <p class="text-xs text-slate-400 leading-relaxed">All interactive touch targets meet WCAG sizing standards (≥ 24px/44px).</p>
+    </div>
+  
+        
+    <div class="p-5 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col justify-between space-y-3 shadow-lg">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span>👁️</span>
+          <h3 class="text-xs font-semibold text-slate-200 uppercase tracking-wider">Readability &amp; Visual Hierarchy</h3>
+        </div>
+        <span class="text-sm font-extrabold text-rose-400">0 / 20</span>
+      </div>
+      <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+        <div class="h-full bg-indigo-500 rounded-full" style="width: 0%"></div>
+      </div>
+      <p class="text-xs text-slate-400 leading-relaxed">226 text, occlusion, or collision issue(s) detected.</p>
+    </div>
+  
+        
+    <div class="p-5 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col justify-between space-y-3 shadow-lg">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span>♿</span>
+          <h3 class="text-xs font-semibold text-slate-200 uppercase tracking-wider">Accessibility &amp; Keyboard Navigation</h3>
+        </div>
+        <span class="text-sm font-extrabold text-rose-400">1 / 15</span>
+      </div>
+      <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+        <div class="h-full bg-indigo-500 rounded-full" style="width: 7%"></div>
+      </div>
+      <p class="text-xs text-slate-400 leading-relaxed">7 missing label or focus ring issue(s) detected.</p>
+    </div>
+  
+      </div>
+    </div>
+
+    <!-- Thumb Zone Ergonomics Advisory (if mobile) -->
+    
+    <section class="p-6 bg-slate-900 border border-slate-800 rounded-2xl space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-bold text-white flex items-center gap-2">
+          <span>👍</span> Mobile Thumb-Zone Ergonomics
+        </h2>
+        <span class="text-xs font-mono font-bold px-2 py-1 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+          Ergonomics Score: 82/100
+        </span>
+      </div>
+      <p class="text-xs text-slate-400">Mobile thumb ergonomics score: 82/100 (8 in Natural zone, 5 in Reach zone, 4 in Hard zone).</p>
+      <div class="grid grid-cols-3 gap-4 text-center text-xs">
+        <div class="bg-emerald-950/40 p-3 rounded-xl border border-emerald-500/30">
+          <div class="text-emerald-400 font-bold text-lg">8</div>
+          <div class="text-slate-400">Natural Zone (Easy)</div>
+        </div>
+        <div class="bg-amber-950/40 p-3 rounded-xl border border-amber-500/30">
+          <div class="text-amber-400 font-bold text-lg">5</div>
+          <div class="text-slate-400">Reach Zone (Moderate)</div>
+        </div>
+        <div class="bg-rose-950/40 p-3 rounded-xl border border-rose-500/30">
+          <div class="text-rose-400 font-bold text-lg">4</div>
+          <div class="text-slate-400">Hard Zone (Stretch)</div>
+        </div>
+      </div>
+    </section>
+    
+
+    <!-- Issues Triage Section -->
+    <section class="p-6 bg-slate-900 border border-slate-800 rounded-2xl space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+        <div>
+          <h2 class="text-xl font-bold text-white flex items-center gap-2">
+            <span>🛠️</span> Issues & Remediation (234)
+          </h2>
+          <p class="text-xs text-slate-400">Actionable layout, overflow, collision, and accessibility fixes</p>
+        </div>
+      </div>
+
+      
+        <div class="space-y-4">
+          <!-- Viewport Fit Issues -->
+          
+
+          <!-- Overflow Issues -->
+          
+            <div class="p-4 bg-slate-950/80 border border-red-500/30 rounded-xl space-y-3">
+              <div class="flex items-start justify-between gap-4">
+                <div class="space-y-1">
+                  <div class="flex items-center gap-2">
+                    <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-red-500/20 text-red-400 border border-red-500/30">
+                      warning
+                    </span>
+                    <span class="text-sm font-semibold text-slate-100">Horizontal Viewport Bleed (+0px)</span>
+                  </div>
+                  <div class="text-xs font-mono text-indigo-400 bg-indigo-950/40 px-2 py-1 rounded border border-indigo-500/20 inline-block">
+                    div#root &gt; div.background-decor &gt; div.circle:nth-of-type(2)
+                  </div>
+                </div>
+              </div>
+              <p class="text-xs text-slate-300">Element &lt;div&gt; (div#root &gt; div.background-decor &gt; div.circle:nth-of-type(2)) has width 247px and extends 0px beyond viewport width (412px).</p>
+              <div class="text-xs text-emerald-300 bg-emerald-950/30 p-2.5 rounded-lg border border-emerald-500/20 font-mono">
+                💡 <span class="font-bold text-emerald-400">Fix:</span> Set max-width: 100% or overflow-x: auto on parent container.
+              </div>
+            </div>
+          
+
+          <!-- Occlusion Issues -->
+          
+            <div class="p-4 bg-slate-950/80 border border-rose-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                  Tap-Jacking / Occlusion
+                </span>
+                <span class="text-sm font-semibold text-slate-100">Interactive Element Click-Blocked</span>
+              </div>
+              <p class="text-xs text-slate-300">Element &lt;select&gt; (#server-sort-by) has 40% of its interactive click area occluded by &lt;div&gt; (div#toast-container &gt; div.toast-card). Check z-index, fixed/sticky navigation overlays, or pointer-events: none.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-rose-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                  Tap-Jacking / Occlusion
+                </span>
+                <span class="text-sm font-semibold text-slate-100">Interactive Element Click-Blocked</span>
+              </div>
+              <p class="text-xs text-slate-300">Element &lt;select&gt; (#server-group-by) has 100% of its interactive click area occluded by &lt;span&gt; (div#toast-container &gt; div.toast-card &gt; div.toast-content &gt; span). Check z-index, fixed/sticky navigation overlays, or pointer-events: none.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-rose-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                  Tap-Jacking / Occlusion
+                </span>
+                <span class="text-sm font-semibold text-slate-100">Interactive Element Click-Blocked</span>
+              </div>
+              <p class="text-xs text-slate-300">Element &lt;button&gt; (#btn-refresh-all) has 100% of its interactive click area occluded by &lt;span&gt; (div#toast-container &gt; div.toast-card &gt; div.toast-content &gt; span). Check z-index, fixed/sticky navigation overlays, or pointer-events: none.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-rose-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                  Tap-Jacking / Occlusion
+                </span>
+                <span class="text-sm font-semibold text-slate-100">Interactive Element Click-Blocked</span>
+              </div>
+              <p class="text-xs text-slate-300">Element &lt;button&gt; (#btn-add-server) has 100% of its interactive click area occluded by &lt;span&gt; (div#toast-container &gt; div.toast-card:nth-of-type(2) &gt; div.toast-content &gt; span). Check z-index, fixed/sticky navigation overlays, or pointer-events: none.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-rose-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                  Tap-Jacking / Occlusion
+                </span>
+                <span class="text-sm font-semibold text-slate-100">Interactive Element Click-Blocked</span>
+              </div>
+              <p class="text-xs text-slate-300">Element &lt;button&gt; (div#toast-container &gt; div.toast-card:nth-of-type(2) &gt; button.toast-close) has 60% of its interactive click area occluded by &lt;theme-editor-overlay&gt; (html &gt; body &gt; theme-editor-overlay). Check z-index, fixed/sticky navigation overlays, or pointer-events: none.</p>
+            </div>
+          
+
+          <!-- Collision Issues -->
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">557731px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#root &gt; div.dashboard-container:nth-of-type(2)) with 557731px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">116634px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#root &gt; div.dashboard-container:nth-of-type(2) &gt; header.dashboard-header) with 116634px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">34240px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#root &gt; div.dashboard-container:nth-of-type(2) &gt; header.dashboard-header &gt; div.header-logo) with 34240px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">1280px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#root &gt; div.dashboard-container:nth-of-type(2) &gt; header.dashboard-header &gt; div.header-logo &gt; i.fa-solid) with 1280px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">9044px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#root &gt; div.dashboard-container:nth-of-type(2) &gt; header.dashboard-header &gt; div.header-logo &gt; div.header-title) with 9044px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">4845px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#root &gt; div.dashboard-container:nth-of-type(2) &gt; header.dashboard-header &gt; div.header-logo &gt; div.header-title &gt; h1) with 4845px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">1292px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (#version-badge) with 1292px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">49963px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#root &gt; div.dashboard-container:nth-of-type(2) &gt; header.dashboard-header &gt; div.header-status:nth-of-type(2)) with 49963px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">12578px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#root &gt; div.dashboard-container:nth-of-type(2) &gt; header.dashboard-header &gt; div.header-status:nth-of-type(2) &gt; div.status-item) with 12578px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">2070px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#root &gt; div.dashboard-container:nth-of-type(2) &gt; header.dashboard-header &gt; div.header-status:nth-of-type(2) &gt; div.status-item &gt; span.label) with 2070px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">1216px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#root &gt; div.dashboard-container:nth-of-type(2) &gt; header.dashboard-header &gt; div.header-status:nth-of-type(2) &gt; div.status-item &gt; span.value:nth-of-type(2)) with 1216px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">64px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div.dashboard-container:nth-of-type(2) &gt; header.dashboard-header &gt; div.header-status:nth-of-type(2) &gt; div.status-item &gt; span.value:nth-of-type(2) &gt; span.indicator) with 64px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">13626px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#root &gt; div.dashboard-container:nth-of-type(2) &gt; header.dashboard-header &gt; div.header-status:nth-of-type(2) &gt; div.status-item:nth-of-type(2)) with 13626px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">1005px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#root &gt; div.dashboard-container:nth-of-type(2) &gt; header.dashboard-header &gt; div.header-status:nth-of-type(2) &gt; div.status-item:nth-of-type(2) &gt; span.label) with 1005px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">4246px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#root &gt; div.dashboard-container:nth-of-type(2) &gt; header.dashboard-header &gt; div.header-status:nth-of-type(2) &gt; div.status-item:nth-of-type(2) &gt; span.value:nth-of-type(2)) with 4246px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">15373px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#root &gt; div.dashboard-container:nth-of-type(2) &gt; header.dashboard-header &gt; div.header-status:nth-of-type(2) &gt; div.status-item:nth-of-type(3)) with 15373px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">1936px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (#theme-toggle) with 1936px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">154px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (button#theme-toggle &gt; i.fa-solid) with 154px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">32485px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#root &gt; div.dashboard-container:nth-of-type(2) &gt; nav.tabs-nav) with 32485px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">3971px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#root &gt; div.dashboard-container:nth-of-type(2) &gt; nav.tabs-nav &gt; button.tab-btn) with 3971px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">169px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#root &gt; div.dashboard-container:nth-of-type(2) &gt; nav.tabs-nav &gt; button.tab-btn &gt; i.fa-solid) with 169px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">4549px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#root &gt; div.dashboard-container:nth-of-type(2) &gt; nav.tabs-nav &gt; button.tab-btn:nth-of-type(2)) with 4549px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">169px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#root &gt; div.dashboard-container:nth-of-type(2) &gt; nav.tabs-nav &gt; button.tab-btn:nth-of-type(2) &gt; i.fa-solid) with 169px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">4243px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#root &gt; div.dashboard-container:nth-of-type(2) &gt; nav.tabs-nav &gt; button.tab-btn:nth-of-type(3)) with 4243px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">169px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#root &gt; div.dashboard-container:nth-of-type(2) &gt; nav.tabs-nav &gt; button.tab-btn:nth-of-type(3) &gt; i.fa-solid) with 169px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">12524px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#root &gt; div.dashboard-container:nth-of-type(2) &gt; nav.tabs-nav &gt; button.tab-btn:nth-of-type(4)) with 12524px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">169px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#root &gt; div.dashboard-container:nth-of-type(2) &gt; nav.tabs-nav &gt; button.tab-btn:nth-of-type(4) &gt; i.fa-solid) with 169px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">369864px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (#view-dashboard) with 369864px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">39139px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#view-dashboard &gt; div.stats-grid) with 39139px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">8645px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#view-dashboard &gt; div.stats-grid &gt; div.stat-box) with 8645px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">1814px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#view-dashboard &gt; div.stats-grid &gt; div.stat-box &gt; span.stat-label) with 1814px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">2418px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (#stat-total-servers) with 2418px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">8700px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#view-dashboard &gt; div.stats-grid &gt; div.stat-box:nth-of-type(2)) with 8700px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">915px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#view-dashboard &gt; div.stats-grid &gt; div.stat-box:nth-of-type(2) &gt; span.stat-label) with 915px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">2440px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (#stat-connected-servers) with 2440px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">8647px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#view-dashboard &gt; div.stats-grid &gt; div.stat-box:nth-of-type(3)) with 8647px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">1814px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#view-dashboard &gt; div.stats-grid &gt; div.stat-box:nth-of-type(3) &gt; span.stat-label) with 1814px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">2419px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (#stat-failed-servers) with 2419px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">8645px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#view-dashboard &gt; div.stats-grid &gt; div.stat-box:nth-of-type(4)) with 8645px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">907px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#view-dashboard &gt; div.stats-grid &gt; div.stat-box:nth-of-type(4) &gt; span.stat-label) with 907px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">2418px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (#stat-disabled-servers) with 2418px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">170646px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#view-dashboard &gt; div.glass-card:nth-of-type(2)) with 170646px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">7852px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; h2) with 7852px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">324px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; h2 &gt; i.fa-solid) with 324px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">82958px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar) with 82958px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">13525px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar &gt; div.search-box) with 13525px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">256px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar &gt; div.search-box &gt; i.fa-solid) with 256px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">13525px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (#server-search) with 13525px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">45801px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar &gt; div.toolbar-actions:nth-of-type(2)) with 45801px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">7172px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar &gt; div.toolbar-actions:nth-of-type(2) &gt; div.select-group) with 7172px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">448px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar &gt; div.toolbar-actions:nth-of-type(2) &gt; div.select-group &gt; label) with 448px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">5588px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (#server-sort-by) with 5588px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">6556px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar &gt; div.toolbar-actions:nth-of-type(2) &gt; div.select-group:nth-of-type(2)) with 6556px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">672px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar &gt; div.toolbar-actions:nth-of-type(2) &gt; div.select-group:nth-of-type(2) &gt; label) with 672px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">4356px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (#server-group-by) with 4356px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">3219px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (#btn-refresh-all) with 3219px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">144px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (button#btn-refresh-all &gt; i.fa-solid) with 144px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">3219px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (#btn-add-server) with 3219px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">132px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (button#btn-add-server &gt; i.fa-solid) with 132px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">27311px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (#server-list) with 27311px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">27311px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#server-list &gt; div.empty-state) with 27311px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">142466px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#view-dashboard &gt; div:nth-of-type(3)) with 142466px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">142466px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#view-dashboard &gt; div:nth-of-type(3) &gt; div.glass-card) with 142466px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">7852px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#view-dashboard &gt; div:nth-of-type(3) &gt; div.glass-card &gt; h2) with 7852px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">288px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#view-dashboard &gt; div:nth-of-type(3) &gt; div.glass-card &gt; h2 &gt; i.fa-solid) with 288px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">10924px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#view-dashboard &gt; div:nth-of-type(3) &gt; div.glass-card &gt; p) with 10924px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">20483px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#view-dashboard &gt; div:nth-of-type(3) &gt; div.glass-card &gt; div.tester-tabs) with 20483px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">4006px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#view-dashboard &gt; div:nth-of-type(3) &gt; div.glass-card &gt; div.tester-tabs &gt; button.tester-tab-btn) with 4006px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">180px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#view-dashboard &gt; div:nth-of-type(3) &gt; div.glass-card &gt; div.tester-tabs &gt; button.tester-tab-btn &gt; i.fa-solid) with 180px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">4843px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#view-dashboard &gt; div:nth-of-type(3) &gt; div.glass-card &gt; div.tester-tabs &gt; button.tester-tab-btn:nth-of-type(2)) with 4843px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">144px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#view-dashboard &gt; div:nth-of-type(3) &gt; div.glass-card &gt; div.tester-tabs &gt; button.tester-tab-btn:nth-of-type(2) &gt; i.fa-solid) with 144px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">3971px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#view-dashboard &gt; div:nth-of-type(3) &gt; div.glass-card &gt; div.tester-tabs &gt; button.tester-tab-btn:nth-of-type(3)) with 3971px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">168px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#view-dashboard &gt; div:nth-of-type(3) &gt; div.glass-card &gt; div.tester-tabs &gt; button.tester-tab-btn:nth-of-type(3) &gt; i.fa-solid) with 168px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">4319px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#view-dashboard &gt; div:nth-of-type(3) &gt; div.glass-card &gt; div.tester-tabs &gt; button.tester-tab-btn:nth-of-type(4)) with 4319px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">180px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#view-dashboard &gt; div:nth-of-type(3) &gt; div.glass-card &gt; div.tester-tabs &gt; button.tester-tab-btn:nth-of-type(4) &gt; i.fa-solid) with 180px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">50867px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#view-dashboard &gt; div:nth-of-type(3) &gt; div.glass-card &gt; div.guide-content:nth-of-type(2)) with 50867px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">36199px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#view-dashboard &gt; div:nth-of-type(3) &gt; div.glass-card &gt; div.guide-content:nth-of-type(2) &gt; div) with 36199px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">9900px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#view-dashboard &gt; div:nth-of-type(3) &gt; div.glass-card &gt; div.guide-content:nth-of-type(2) &gt; div &gt; p) with 9900px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">26298px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#view-dashboard &gt; div:nth-of-type(3) &gt; div.glass-card &gt; div.guide-content:nth-of-type(2) &gt; div &gt; ul) with 26298px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">5260px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div:nth-of-type(3) &gt; div.glass-card &gt; div.guide-content:nth-of-type(2) &gt; div &gt; ul &gt; li) with 5260px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">704px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div.glass-card &gt; div.guide-content:nth-of-type(2) &gt; div &gt; ul &gt; li &gt; strong) with 704px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">1174px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div.glass-card &gt; div.guide-content:nth-of-type(2) &gt; div &gt; ul &gt; li &gt; code) with 1174px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">5260px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div:nth-of-type(3) &gt; div.glass-card &gt; div.guide-content:nth-of-type(2) &gt; div &gt; ul &gt; li:nth-of-type(2)) with 5260px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">608px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div.glass-card &gt; div.guide-content:nth-of-type(2) &gt; div &gt; ul &gt; li:nth-of-type(2) &gt; strong) with 608px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">352px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div.glass-card &gt; div.guide-content:nth-of-type(2) &gt; div &gt; ul &gt; li:nth-of-type(2) &gt; code) with 352px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">5260px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div:nth-of-type(3) &gt; div.glass-card &gt; div.guide-content:nth-of-type(2) &gt; div &gt; ul &gt; li:nth-of-type(3)) with 5260px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">1248px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div.glass-card &gt; div.guide-content:nth-of-type(2) &gt; div &gt; ul &gt; li:nth-of-type(3) &gt; strong) with 1248px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">2935px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div.glass-card &gt; div.guide-content:nth-of-type(2) &gt; div &gt; ul &gt; li:nth-of-type(3) &gt; code) with 2935px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">10519px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div:nth-of-type(3) &gt; div.glass-card &gt; div.guide-content:nth-of-type(2) &gt; div &gt; ul &gt; li:nth-of-type(4)) with 10519px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">1008px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div.glass-card &gt; div.guide-content:nth-of-type(2) &gt; div &gt; ul &gt; li:nth-of-type(4) &gt; strong) with 1008px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">6512px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div.glass-card &gt; div.guide-content:nth-of-type(2) &gt; div &gt; ul &gt; li:nth-of-type(4) &gt; code) with 6512px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">18004px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#root &gt; div.dashboard-container:nth-of-type(2) &gt; footer.dashboard-footer) with 18004px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">11742px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#root &gt; div.dashboard-container:nth-of-type(2) &gt; footer.dashboard-footer &gt; p) with 11742px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">58032px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (#toast-container) with 58032px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">27528px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#toast-container &gt; div.toast-card) with 27528px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">11245px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#toast-container &gt; div.toast-card &gt; div.toast-content) with 11245px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">317px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#toast-container &gt; div.toast-card &gt; div.toast-content &gt; i.fa-solid) with 317px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">10069px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#toast-container &gt; div.toast-card &gt; div.toast-content &gt; span) with 10069px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">1936px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#toast-container &gt; div.toast-card &gt; button.toast-close) with 1936px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">154px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#toast-container &gt; div.toast-card &gt; button.toast-close &gt; i.fa-solid) with 154px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">27528px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#toast-container &gt; div.toast-card:nth-of-type(2)) with 27528px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">11245px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#toast-container &gt; div.toast-card:nth-of-type(2) &gt; div.toast-content) with 11245px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">317px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#toast-container &gt; div.toast-card:nth-of-type(2) &gt; div.toast-content &gt; i.fa-solid) with 317px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">10069px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#toast-container &gt; div.toast-card:nth-of-type(2) &gt; div.toast-content &gt; span) with 10069px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">1936px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#toast-container &gt; div.toast-card:nth-of-type(2) &gt; button.toast-close) with 1936px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">154px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor) collides with (div#toast-container &gt; div.toast-card:nth-of-type(2) &gt; button.toast-close &gt; i.fa-solid) with 154px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">8137px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor &gt; div.circle) collides with (div#root &gt; div.dashboard-container:nth-of-type(2)) with 8137px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">8137px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor &gt; div.circle) collides with (div#root &gt; div.dashboard-container:nth-of-type(2) &gt; header.dashboard-header) with 8137px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">3811px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor &gt; div.circle) collides with (div#root &gt; div.dashboard-container:nth-of-type(2) &gt; header.dashboard-header &gt; div.header-logo) with 3811px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">740px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor &gt; div.circle) collides with (div#root &gt; div.dashboard-container:nth-of-type(2) &gt; header.dashboard-header &gt; div.header-logo &gt; i.fa-solid) with 740px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">17452px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor &gt; div.circle:nth-of-type(2)) collides with (div#root &gt; div.dashboard-container:nth-of-type(2)) with 17452px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">4259px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor &gt; div.circle:nth-of-type(2)) collides with (#view-dashboard) with 4259px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">4259px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor &gt; div.circle:nth-of-type(2)) collides with (div#view-dashboard &gt; div:nth-of-type(3)) with 4259px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">4259px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor &gt; div.circle:nth-of-type(2)) collides with (div#view-dashboard &gt; div:nth-of-type(3) &gt; div.glass-card) with 4259px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">9949px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor &gt; div.circle:nth-of-type(2)) collides with (div#root &gt; div.dashboard-container:nth-of-type(2) &gt; footer.dashboard-footer) with 9949px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">6489px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.background-decor &gt; div.circle:nth-of-type(2)) collides with (div#root &gt; div.dashboard-container:nth-of-type(2) &gt; footer.dashboard-footer &gt; p) with 6489px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">58032px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.dashboard-container:nth-of-type(2)) collides with (#toast-container) with 58032px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">27528px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.dashboard-container:nth-of-type(2)) collides with (div#toast-container &gt; div.toast-card) with 27528px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">11245px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.dashboard-container:nth-of-type(2)) collides with (div#toast-container &gt; div.toast-card &gt; div.toast-content) with 11245px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">317px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.dashboard-container:nth-of-type(2)) collides with (div#toast-container &gt; div.toast-card &gt; div.toast-content &gt; i.fa-solid) with 317px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">10069px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.dashboard-container:nth-of-type(2)) collides with (div#toast-container &gt; div.toast-card &gt; div.toast-content &gt; span) with 10069px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">1936px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.dashboard-container:nth-of-type(2)) collides with (div#toast-container &gt; div.toast-card &gt; button.toast-close) with 1936px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">154px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.dashboard-container:nth-of-type(2)) collides with (div#toast-container &gt; div.toast-card &gt; button.toast-close &gt; i.fa-solid) with 154px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">27528px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.dashboard-container:nth-of-type(2)) collides with (div#toast-container &gt; div.toast-card:nth-of-type(2)) with 27528px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">11245px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.dashboard-container:nth-of-type(2)) collides with (div#toast-container &gt; div.toast-card:nth-of-type(2) &gt; div.toast-content) with 11245px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">317px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.dashboard-container:nth-of-type(2)) collides with (div#toast-container &gt; div.toast-card:nth-of-type(2) &gt; div.toast-content &gt; i.fa-solid) with 317px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">10069px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.dashboard-container:nth-of-type(2)) collides with (div#toast-container &gt; div.toast-card:nth-of-type(2) &gt; div.toast-content &gt; span) with 10069px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">1936px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.dashboard-container:nth-of-type(2)) collides with (div#toast-container &gt; div.toast-card:nth-of-type(2) &gt; button.toast-close) with 1936px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">154px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#root &gt; div.dashboard-container:nth-of-type(2)) collides with (div#toast-container &gt; div.toast-card:nth-of-type(2) &gt; button.toast-close &gt; i.fa-solid) with 154px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">58032px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (#view-dashboard) collides with (#toast-container) with 58032px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">27528px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (#view-dashboard) collides with (div#toast-container &gt; div.toast-card) with 27528px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">11245px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (#view-dashboard) collides with (div#toast-container &gt; div.toast-card &gt; div.toast-content) with 11245px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">317px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (#view-dashboard) collides with (div#toast-container &gt; div.toast-card &gt; div.toast-content &gt; i.fa-solid) with 317px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">10069px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (#view-dashboard) collides with (div#toast-container &gt; div.toast-card &gt; div.toast-content &gt; span) with 10069px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">1936px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (#view-dashboard) collides with (div#toast-container &gt; div.toast-card &gt; button.toast-close) with 1936px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">154px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (#view-dashboard) collides with (div#toast-container &gt; div.toast-card &gt; button.toast-close &gt; i.fa-solid) with 154px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">27528px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (#view-dashboard) collides with (div#toast-container &gt; div.toast-card:nth-of-type(2)) with 27528px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">11245px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (#view-dashboard) collides with (div#toast-container &gt; div.toast-card:nth-of-type(2) &gt; div.toast-content) with 11245px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">317px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (#view-dashboard) collides with (div#toast-container &gt; div.toast-card:nth-of-type(2) &gt; div.toast-content &gt; i.fa-solid) with 317px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">10069px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (#view-dashboard) collides with (div#toast-container &gt; div.toast-card:nth-of-type(2) &gt; div.toast-content &gt; span) with 10069px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">1936px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (#view-dashboard) collides with (div#toast-container &gt; div.toast-card:nth-of-type(2) &gt; button.toast-close) with 1936px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">154px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (#view-dashboard) collides with (div#toast-container &gt; div.toast-card:nth-of-type(2) &gt; button.toast-close &gt; i.fa-solid) with 154px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">58032px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2)) collides with (#toast-container) with 58032px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">27528px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2)) collides with (div#toast-container &gt; div.toast-card) with 27528px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">11245px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2)) collides with (div#toast-container &gt; div.toast-card &gt; div.toast-content) with 11245px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">317px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2)) collides with (div#toast-container &gt; div.toast-card &gt; div.toast-content &gt; i.fa-solid) with 317px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">10069px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2)) collides with (div#toast-container &gt; div.toast-card &gt; div.toast-content &gt; span) with 10069px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">1936px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2)) collides with (div#toast-container &gt; div.toast-card &gt; button.toast-close) with 1936px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">154px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2)) collides with (div#toast-container &gt; div.toast-card &gt; button.toast-close &gt; i.fa-solid) with 154px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">27528px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2)) collides with (div#toast-container &gt; div.toast-card:nth-of-type(2)) with 27528px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">11245px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2)) collides with (div#toast-container &gt; div.toast-card:nth-of-type(2) &gt; div.toast-content) with 11245px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">317px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2)) collides with (div#toast-container &gt; div.toast-card:nth-of-type(2) &gt; div.toast-content &gt; i.fa-solid) with 317px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">10069px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2)) collides with (div#toast-container &gt; div.toast-card:nth-of-type(2) &gt; div.toast-content &gt; span) with 10069px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">1936px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2)) collides with (div#toast-container &gt; div.toast-card:nth-of-type(2) &gt; button.toast-close) with 1936px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">154px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2)) collides with (div#toast-container &gt; div.toast-card:nth-of-type(2) &gt; button.toast-close &gt; i.fa-solid) with 154px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">44722px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar) collides with (#toast-container) with 44722px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">25263px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar) collides with (div#toast-container &gt; div.toast-card) with 25263px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">11245px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar) collides with (div#toast-container &gt; div.toast-card &gt; div.toast-content) with 11245px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">317px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar) collides with (div#toast-container &gt; div.toast-card &gt; div.toast-content &gt; i.fa-solid) with 317px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">10069px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar) collides with (div#toast-container &gt; div.toast-card &gt; div.toast-content &gt; span) with 10069px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">1936px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar) collides with (div#toast-container &gt; div.toast-card &gt; button.toast-close) with 1936px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">154px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar) collides with (div#toast-container &gt; div.toast-card &gt; button.toast-close &gt; i.fa-solid) with 154px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">16728px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar) collides with (div#toast-container &gt; div.toast-card:nth-of-type(2)) with 16728px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">9066px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar) collides with (div#toast-container &gt; div.toast-card:nth-of-type(2) &gt; div.toast-content) with 9066px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">317px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar) collides with (div#toast-container &gt; div.toast-card:nth-of-type(2) &gt; div.toast-content &gt; i.fa-solid) with 317px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">8119px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar) collides with (div#toast-container &gt; div.toast-card:nth-of-type(2) &gt; div.toast-content &gt; span) with 8119px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">1496px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar) collides with (div#toast-container &gt; div.toast-card:nth-of-type(2) &gt; button.toast-close) with 1496px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">154px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar) collides with (div#toast-container &gt; div.toast-card:nth-of-type(2) &gt; button.toast-close &gt; i.fa-solid) with 154px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">256px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar &gt; div.search-box &gt; i.fa-solid) collides with (#server-search) with 256px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">35042px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar &gt; div.toolbar-actions:nth-of-type(2)) collides with (#toast-container) with 35042px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">22747px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar &gt; div.toolbar-actions:nth-of-type(2)) collides with (div#toast-container &gt; div.toast-card) with 22747px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">10841px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar &gt; div.toolbar-actions:nth-of-type(2)) collides with (div#toast-container &gt; div.toast-card &gt; div.toast-content) with 10841px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">136px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar &gt; div.toolbar-actions:nth-of-type(2)) collides with (div#toast-container &gt; div.toast-card &gt; div.toast-content &gt; i.fa-solid) with 136px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">10069px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar &gt; div.toolbar-actions:nth-of-type(2)) collides with (div#toast-container &gt; div.toast-card &gt; div.toast-content &gt; span) with 10069px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">1350px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar &gt; div.toolbar-actions:nth-of-type(2)) collides with (div#toast-container &gt; div.toast-card &gt; button.toast-close) with 1350px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">115px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar &gt; div.toolbar-actions:nth-of-type(2)) collides with (div#toast-container &gt; div.toast-card &gt; button.toast-close &gt; i.fa-solid) with 115px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">9836px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar &gt; div.toolbar-actions:nth-of-type(2)) collides with (div#toast-container &gt; div.toast-card:nth-of-type(2)) with 9836px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">4037px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar &gt; div.toolbar-actions:nth-of-type(2)) collides with (div#toast-container &gt; div.toast-card:nth-of-type(2) &gt; div.toast-content) with 4037px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">29px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar &gt; div.toolbar-actions:nth-of-type(2)) collides with (div#toast-container &gt; div.toast-card:nth-of-type(2) &gt; div.toast-content &gt; i.fa-solid) with 29px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">3750px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar &gt; div.toolbar-actions:nth-of-type(2)) collides with (div#toast-container &gt; div.toast-card:nth-of-type(2) &gt; div.toast-content &gt; span) with 3750px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">522px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar &gt; div.toolbar-actions:nth-of-type(2)) collides with (div#toast-container &gt; div.toast-card:nth-of-type(2) &gt; button.toast-close) with 522px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">1467px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar &gt; div.toolbar-actions:nth-of-type(2) &gt; div.select-group) collides with (#toast-container) with 1467px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">1467px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar &gt; div.toolbar-actions:nth-of-type(2) &gt; div.select-group) collides with (div#toast-container &gt; div.toast-card) with 1467px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">1143px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (#server-sort-by) collides with (#toast-container) with 1143px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">1143px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (#server-sort-by) collides with (div#toast-container &gt; div.toast-card) with 1143px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">6556px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar &gt; div.toolbar-actions:nth-of-type(2) &gt; div.select-group:nth-of-type(2)) collides with (#toast-container) with 6556px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">6556px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar &gt; div.toolbar-actions:nth-of-type(2) &gt; div.select-group:nth-of-type(2)) collides with (div#toast-container &gt; div.toast-card) with 6556px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">4707px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar &gt; div.toolbar-actions:nth-of-type(2) &gt; div.select-group:nth-of-type(2)) collides with (div#toast-container &gt; div.toast-card &gt; div.toast-content) with 4707px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">136px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar &gt; div.toolbar-actions:nth-of-type(2) &gt; div.select-group:nth-of-type(2)) collides with (div#toast-container &gt; div.toast-card &gt; div.toast-content &gt; i.fa-solid) with 136px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">4085px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar &gt; div.toolbar-actions:nth-of-type(2) &gt; div.select-group:nth-of-type(2)) collides with (div#toast-container &gt; div.toast-card &gt; div.toast-content &gt; span) with 4085px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">672px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar &gt; div.toolbar-actions:nth-of-type(2) &gt; div.select-group:nth-of-type(2) &gt; label) collides with (#toast-container) with 672px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">672px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar &gt; div.toolbar-actions:nth-of-type(2) &gt; div.select-group:nth-of-type(2) &gt; label) collides with (div#toast-container &gt; div.toast-card) with 672px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">672px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar &gt; div.toolbar-actions:nth-of-type(2) &gt; div.select-group:nth-of-type(2) &gt; label) collides with (div#toast-container &gt; div.toast-card &gt; div.toast-content) with 672px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Text Collision
+                </span>
+                <span class="text-sm font-semibold text-slate-100">52px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Text labels (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar &gt; div.toolbar-actions:nth-of-type(2) &gt; div.select-group:nth-of-type(2) &gt; label) and (div#toast-container &gt; div.toast-card &gt; div.toast-content &gt; i.fa-solid) overlap by 52px², making characters illegible. Add flex gap or line wrapping.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Text Collision
+                </span>
+                <span class="text-sm font-semibold text-slate-100">357px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Text labels (div#view-dashboard &gt; div.glass-card:nth-of-type(2) &gt; div.server-controls-toolbar &gt; div.toolbar-actions:nth-of-type(2) &gt; div.select-group:nth-of-type(2) &gt; label) and (div#toast-container &gt; div.toast-card &gt; div.toast-content &gt; span) overlap by 357px², making characters illegible. Add flex gap or line wrapping.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">4356px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (#server-group-by) collides with (#toast-container) with 4356px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">4356px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (#server-group-by) collides with (div#toast-container &gt; div.toast-card) with 4356px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">3127px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (#server-group-by) collides with (div#toast-container &gt; div.toast-card &gt; div.toast-content) with 3127px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">3127px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (#server-group-by) collides with (div#toast-container &gt; div.toast-card &gt; div.toast-content &gt; span) with 3127px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">3219px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (#btn-refresh-all) collides with (#toast-container) with 3219px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">3219px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (#btn-refresh-all) collides with (div#toast-container &gt; div.toast-card) with 3219px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">2674px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (#btn-refresh-all) collides with (div#toast-container &gt; div.toast-card &gt; div.toast-content) with 2674px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">2674px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (#btn-refresh-all) collides with (div#toast-container &gt; div.toast-card &gt; div.toast-content &gt; span) with 2674px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">144px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (button#btn-refresh-all &gt; i.fa-solid) collides with (#toast-container) with 144px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">144px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (button#btn-refresh-all &gt; i.fa-solid) collides with (div#toast-container &gt; div.toast-card) with 144px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">144px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (button#btn-refresh-all &gt; i.fa-solid) collides with (div#toast-container &gt; div.toast-card &gt; div.toast-content) with 144px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Text Collision
+                </span>
+                <span class="text-sm font-semibold text-slate-100">144px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Text labels (button#btn-refresh-all &gt; i.fa-solid) and (div#toast-container &gt; div.toast-card &gt; div.toast-content &gt; span) overlap by 144px², making characters illegible. Add flex gap or line wrapping.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">3219px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (#btn-add-server) collides with (#toast-container) with 3219px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">3219px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (#btn-add-server) collides with (div#toast-container &gt; div.toast-card:nth-of-type(2)) with 3219px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">1619px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (#btn-add-server) collides with (div#toast-container &gt; div.toast-card:nth-of-type(2) &gt; div.toast-content) with 1619px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">29px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (#btn-add-server) collides with (div#toast-container &gt; div.toast-card:nth-of-type(2) &gt; div.toast-content &gt; i.fa-solid) with 29px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">1332px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (#btn-add-server) collides with (div#toast-container &gt; div.toast-card:nth-of-type(2) &gt; div.toast-content &gt; span) with 1332px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">132px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (button#btn-add-server &gt; i.fa-solid) collides with (#toast-container) with 132px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">132px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (button#btn-add-server &gt; i.fa-solid) collides with (div#toast-container &gt; div.toast-card:nth-of-type(2)) with 132px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">67px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (button#btn-add-server &gt; i.fa-solid) collides with (div#toast-container &gt; div.toast-card:nth-of-type(2) &gt; div.toast-content) with 67px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Text Collision
+                </span>
+                <span class="text-sm font-semibold text-slate-100">26px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Text labels (button#btn-add-server &gt; i.fa-solid) and (div#toast-container &gt; div.toast-card:nth-of-type(2) &gt; div.toast-content &gt; span) overlap by 26px², making characters illegible. Add flex gap or line wrapping.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">1707px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (#server-list) collides with (#toast-container) with 1707px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">1707px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (#server-list) collides with (div#toast-container &gt; div.toast-card:nth-of-type(2)) with 1707px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">1707px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#server-list &gt; div.empty-state) collides with (#toast-container) with 1707px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">1707px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div#server-list &gt; div.empty-state) collides with (div#toast-container &gt; div.toast-card:nth-of-type(2)) with 1707px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Element Overlap
+                </span>
+                <span class="text-sm font-semibold text-slate-100">882px² Overlapping Area</span>
+              </div>
+              <p class="text-xs text-slate-300">Element (div.glass-card &gt; div.guide-content:nth-of-type(2) &gt; div &gt; ul &gt; li:nth-of-type(4) &gt; strong) collides with (div.glass-card &gt; div.guide-content:nth-of-type(2) &gt; div &gt; ul &gt; li:nth-of-type(4) &gt; code) with 882px² overlap. Check flex-wrap, margin, or position absolute constraints.</p>
+            </div>
+          
+
+          <!-- Scroll Trap Issues -->
+          
+
+          <!-- Accessible Name Issues -->
+          
+            <div class="p-4 bg-slate-950/80 border border-indigo-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+                  Missing Accessible Name
+                </span>
+                <span class="text-sm font-semibold text-slate-100"><input> </span>
+              </div>
+              <p class="text-xs text-slate-300">Interactive element &lt;input&gt; (#server-search) is missing an accessible name. Add visible label or aria-label attribute.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-indigo-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+                  Missing Accessible Name
+                </span>
+                <span class="text-sm font-semibold text-slate-100"><button> </span>
+              </div>
+              <p class="text-xs text-slate-300">Interactive element &lt;button&gt; (div#toast-container &gt; div.toast-card &gt; button.toast-close) is missing an accessible name. Add visible label or aria-label attribute.</p>
+            </div>
+          
+            <div class="p-4 bg-slate-950/80 border border-indigo-500/30 rounded-xl space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+                  Missing Accessible Name
+                </span>
+                <span class="text-sm font-semibold text-slate-100"><button> </span>
+              </div>
+              <p class="text-xs text-slate-300">Interactive element &lt;button&gt; (div#toast-container &gt; div.toast-card:nth-of-type(2) &gt; button.toast-close) is missing an accessible name. Add visible label or aria-label attribute.</p>
+            </div>
+          
+
+          <!-- Touch Target Issues -->
+          
+        </div>
+      
+    </section>
+
+    <!-- Footer -->
+    <footer class="text-center text-xs text-slate-600 py-6 border-t border-slate-900">
+      Generated by <strong class="text-slate-400">Playwright Layout Inspector</strong> • Automated UX & Layout Quality Assurance
+    </footer>
+  </div>
+</body>
+</html>
