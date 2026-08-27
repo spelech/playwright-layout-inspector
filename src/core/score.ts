@@ -1,5 +1,6 @@
 import {
   AccessibleNameIssue,
+  ColorContrastIssue,
   ElementCollisionIssue,
   FocusIndicatorIssue,
   LayoutShiftResult,
@@ -30,6 +31,7 @@ export function computeUXScore(params: {
   layoutShiftResult?: LayoutShiftResult;
   touchTargetIssues: TouchTargetIssue[];
   readabilityIssues: ReadabilityIssue[];
+  contrastIssues?: ColorContrastIssue[];
   occlusionIssues: OcclusionIssue[];
   collisionIssues?: ElementCollisionIssue[];
   scrollTrapIssues?: ScrollTrapIssue[];
@@ -43,6 +45,7 @@ export function computeUXScore(params: {
     layoutShiftResult,
     touchTargetIssues,
     readabilityIssues,
+    contrastIssues = [],
     occlusionIssues,
     collisionIssues = [],
     scrollTrapIssues = [],
@@ -169,9 +172,12 @@ export function computeUXScore(params: {
   for (const foc of focusIndicatorIssues) {
     a11yPenalty += (foc.severity === 'critical' ? 4 : 2);
   }
+  for (const con of contrastIssues) {
+    a11yPenalty += (con.severity === 'critical' ? 5 : 2);
+  }
 
   const a11yScoreVal = Math.max(0, Math.min(maxA11yScore, maxA11yScore - a11yPenalty));
-  const totalA11yIssues = accessibleNameIssues.length + focusIndicatorIssues.length;
+  const totalA11yIssues = accessibleNameIssues.length + focusIndicatorIssues.length + contrastIssues.length;
   const a11yCategory: UXCategoryScore = {
     name: 'Accessibility & Keyboard Navigation',
     score: Math.round(a11yScoreVal * 10) / 10,
@@ -181,8 +187,8 @@ export function computeUXScore(params: {
     passed: a11yScoreVal >= maxA11yScore * 0.8,
     issueCount: totalA11yIssues,
     summary: totalA11yIssues === 0
-      ? 'Accessible names on all icon buttons and visible keyboard focus rings.'
-      : `${totalA11yIssues} missing label or focus ring issue(s) detected.`
+      ? 'Fully compliant accessibility semantics, focus rings, and WCAG color contrast ratios.'
+      : `${totalA11yIssues} accessibility, contrast, or focus indicator issue(s) detected.`
   };
 
   // Total Score

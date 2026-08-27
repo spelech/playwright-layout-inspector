@@ -402,6 +402,98 @@ function evaluateTextReadability(element, isMobile, minFontSizePx = 12) {
   };
 }
 
+// src/core/contrast.ts
+function parseColor(colorStr) {
+  if (!colorStr || colorStr === "transparent") {
+    return { r: 0, g: 0, b: 0, a: 0 };
+  }
+  const rgbMatch = colorStr.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+  if (rgbMatch) {
+    return {
+      r: parseInt(rgbMatch[1], 10),
+      g: parseInt(rgbMatch[2], 10),
+      b: parseInt(rgbMatch[3], 10),
+      a: rgbMatch[4] !== void 0 ? parseFloat(rgbMatch[4]) : 1
+    };
+  }
+  if (colorStr.startsWith("#")) {
+    const hex = colorStr.slice(1);
+    if (hex.length === 3) {
+      return {
+        r: parseInt(hex[0] + hex[0], 16),
+        g: parseInt(hex[1] + hex[1], 16),
+        b: parseInt(hex[2] + hex[2], 16),
+        a: 1
+      };
+    }
+    if (hex.length === 6) {
+      return {
+        r: parseInt(hex.slice(0, 2), 16),
+        g: parseInt(hex.slice(2, 4), 16),
+        b: parseInt(hex.slice(4, 6), 16),
+        a: 1
+      };
+    }
+    if (hex.length === 8) {
+      return {
+        r: parseInt(hex.slice(0, 2), 16),
+        g: parseInt(hex.slice(2, 4), 16),
+        b: parseInt(hex.slice(4, 6), 16),
+        a: parseInt(hex.slice(6, 8), 16) / 255
+      };
+    }
+  }
+  return null;
+}
+function getRelativeLuminance(rgba) {
+  const [rs, gs, bs] = [rgba.r / 255, rgba.g / 255, rgba.b / 255].map((val) => {
+    return val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+}
+function getContrastRatio(fgColorStr, bgColorStr) {
+  const fg = parseColor(fgColorStr);
+  const bg = parseColor(bgColorStr) || { r: 255, g: 255, b: 255};
+  if (!fg) return 21;
+  const effectiveFg = fg.a < 1 ? {
+    r: Math.round(fg.r * fg.a + bg.r * (1 - fg.a)),
+    g: Math.round(fg.g * fg.a + bg.g * (1 - fg.a)),
+    b: Math.round(fg.b * fg.a + bg.b * (1 - fg.a))} : fg;
+  const l1 = getRelativeLuminance(effectiveFg);
+  const l2 = getRelativeLuminance(bg);
+  const lighter = Math.max(l1, l2);
+  const darker = Math.min(l1, l2);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+function evaluateColorContrast(element, options) {
+  if (!element.textSnippet || element.textSnippet.trim().length === 0) {
+    return null;
+  }
+  const isBold = parseInt(element.fontWeight, 10) >= 700 || element.fontWeight === "bold";
+  const isLargeText = element.fontSizePx >= 24 || element.fontSizePx >= 18.66 && isBold;
+  const defaultRequiredRatio = isLargeText ? 3 : 4.5;
+  const requiredRatio = options?.minRatio !== void 0 ? options.minRatio : defaultRequiredRatio;
+  const ratio = Math.round(getContrastRatio(element.color, element.backgroundColor) * 100) / 100;
+  if (ratio >= requiredRatio) {
+    return null;
+  }
+  const severity = ratio < 3 ? "critical" : "warning";
+  const suggestion = `Text contrast ratio is ${ratio}:1 (${element.color} on ${element.backgroundColor}), which fails WCAG AA requirement of ${requiredRatio}:1 for ${isLargeText ? "large" : "normal"} text. Adjust text or background color to improve contrast.`;
+  return {
+    selector: element.selector,
+    tagName: element.tagName,
+    textSnippet: element.textSnippet.length > 50 ? element.textSnippet.substring(0, 47) + "..." : element.textSnippet,
+    foregroundColor: element.color,
+    backgroundColor: element.backgroundColor,
+    contrastRatio: ratio,
+    requiredRatio,
+    fontSizePx: element.fontSizePx,
+    isBold,
+    severity,
+    suggestion
+  };
+}
+
 // src/core/occlusion.ts
 function evaluateElementOcclusion(target, raycastResults) {
   if (!target.isInteractive || raycastResults.length === 0) {
@@ -674,6 +766,7 @@ function computeUXScore(params) {
     layoutShiftResult,
     touchTargetIssues,
     readabilityIssues,
+    contrastIssues = [],
     occlusionIssues,
     collisionIssues = [],
     scrollTrapIssues = [],
@@ -774,8 +867,11 @@ function computeUXScore(params) {
   for (const foc of focusIndicatorIssues) {
     a11yPenalty += foc.severity === "critical" ? 4 : 2;
   }
+  for (const con of contrastIssues) {
+    a11yPenalty += con.severity === "critical" ? 5 : 2;
+  }
   const a11yScoreVal = Math.max(0, Math.min(maxA11yScore, maxA11yScore - a11yPenalty));
-  const totalA11yIssues = accessibleNameIssues.length + focusIndicatorIssues.length;
+  const totalA11yIssues = accessibleNameIssues.length + focusIndicatorIssues.length + contrastIssues.length;
   const a11yCategory = {
     name: "Accessibility & Keyboard Navigation",
     score: Math.round(a11yScoreVal * 10) / 10,
@@ -784,7 +880,7 @@ function computeUXScore(params) {
     grade: calculateGrade(a11yScoreVal / maxA11yScore * 100),
     passed: a11yScoreVal >= maxA11yScore * 0.8,
     issueCount: totalA11yIssues,
-    summary: totalA11yIssues === 0 ? "Accessible names on all icon buttons and visible keyboard focus rings." : `${totalA11yIssues} missing label or focus ring issue(s) detected.`
+    summary: totalA11yIssues === 0 ? "Fully compliant accessibility semantics, focus rings, and WCAG color contrast ratios." : `${totalA11yIssues} accessibility, contrast, or focus indicator issue(s) detected.`
   };
   const totalScoreVal = Math.round((overflowScoreVal + stabilityScoreVal + touchScoreVal + readabilityScoreVal + a11yScoreVal) * 10) / 10;
   const overallGrade = calculateGrade(totalScoreVal);
@@ -858,6 +954,17 @@ function collectInPageAuditScript(optionsJson = "{}") {
   const allElements = Array.from(document.querySelectorAll("body *"));
   const collectedElements = [];
   for (const el of allElements) {
+    let parseRgba2 = function(str) {
+      if (!str || str === "transparent") return null;
+      const m = str.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+      if (!m) return null;
+      return {
+        r: parseInt(m[1], 10),
+        g: parseInt(m[2], 10),
+        b: parseInt(m[3], 10),
+        a: m[4] !== void 0 ? parseFloat(m[4]) : 1
+      };
+    };
     const tag = el.tagName.toLowerCase();
     if (["script", "style", "noscript", "path", "g", "defs", "clippath", "symbol", "use", "br", "hr"].includes(tag)) {
       continue;
@@ -891,12 +998,50 @@ function collectInPageAuditScript(optionsJson = "{}") {
     const ariaLabelledBy = el.getAttribute("aria-labelledby");
     const title = el.getAttribute("title");
     const hasAccessibleName = !!(ariaLabel?.trim() || ariaLabelledBy?.trim() || title?.trim() || textContent.length > 0);
+    const isVisuallyHidden = comp.display === "none" || comp.visibility === "hidden" || parseFloat(comp.opacity) === 0 || el.classList.contains("sr-only") || rect.width <= 1 && rect.height <= 1 && comp.overflow === "hidden";
+    let hasDirectText = false;
+    if (!isVisuallyHidden) {
+      for (let i = 0; i < el.childNodes.length; i++) {
+        const node = el.childNodes[i];
+        if (node.nodeType === Node.TEXT_NODE && (node.nodeValue || "").trim().length > 0) {
+          hasDirectText = true;
+          break;
+        }
+      }
+      if (tag === "input" || tag === "textarea" || tag === "select" || isTextOnly) {
+        hasDirectText = true;
+      }
+    }
     const ancestors = [];
     let p = el.parentElement;
     while (p && p.tagName.toLowerCase() !== "html") {
       ancestors.push(getCssSelector(p));
       p = p.parentElement;
     }
+    const bgStack = [];
+    let currBgEl = el;
+    while (currBgEl) {
+      const bgStyle = window.getComputedStyle(currBgEl).backgroundColor;
+      const parsed = parseRgba2(bgStyle);
+      if (parsed && parsed.a > 0) {
+        bgStack.unshift(parsed);
+      }
+      currBgEl = currBgEl.parentElement;
+    }
+    let compBg = { r: 255, g: 255, b: 255};
+    for (const bgLayer of bgStack) {
+      if (bgLayer.a >= 1) {
+        compBg = { r: bgLayer.r, g: bgLayer.g, b: bgLayer.b, a: 1 };
+      } else {
+        compBg = {
+          r: Math.round(bgLayer.r * bgLayer.a + compBg.r * (1 - bgLayer.a)),
+          g: Math.round(bgLayer.g * bgLayer.a + compBg.g * (1 - bgLayer.a)),
+          b: Math.round(bgLayer.b * bgLayer.a + compBg.b * (1 - bgLayer.a)),
+          a: 1
+        };
+      }
+    }
+    const effectiveBg = `rgb(${compBg.r}, ${compBg.g}, ${compBg.b})`;
     collectedElements.push({
       selector,
       tagName: tag,
@@ -904,6 +1049,7 @@ function collectInPageAuditScript(optionsJson = "{}") {
       className: typeof el.className === "string" ? el.className : "",
       textSnippet,
       ancestors,
+      hasDirectText,
       rect: {
         x: Math.round(rect.x * 100) / 100,
         y: Math.round(rect.y * 100) / 100,
@@ -932,6 +1078,9 @@ function collectInPageAuditScript(optionsJson = "{}") {
         padding: comp.padding,
         fontSize: comp.fontSize,
         lineHeight: comp.lineHeight,
+        fontWeight: comp.fontWeight,
+        color: comp.color,
+        backgroundColor: effectiveBg,
         zIndex: comp.zIndex,
         outlineWidth: comp.outlineWidth,
         outlineStyle: comp.outlineStyle,
@@ -1324,6 +1473,7 @@ var LayoutInspector = class {
       checkTouchTargets: true,
       checkOverflow: true,
       checkReadability: true,
+      checkContrast: true,
       checkOcclusion: true,
       checkCollisions: true,
       checkScrollTraps: true,
@@ -1419,6 +1569,32 @@ var LayoutInspector = class {
         );
         if (issue) {
           readabilityIssues.push(issue);
+        }
+      }
+    }
+    const contrastIssues = [];
+    if (mergedOptions.checkContrast !== false) {
+      for (const el of inPageData.elements) {
+        if (!el.hasDirectText) continue;
+        if (!el.textSnippet || el.textSnippet.trim().length === 0) continue;
+        const fontSizePx = parseFloat(el.computedStyles.fontSize) || 16;
+        const color = el.computedStyles.color || "rgb(0, 0, 0)";
+        const backgroundColor = el.computedStyles.backgroundColor || "rgb(255, 255, 255)";
+        const fontWeight = el.computedStyles.fontWeight || "400";
+        const issue = evaluateColorContrast(
+          {
+            selector: el.selector,
+            tagName: el.tagName,
+            textSnippet: el.textSnippet,
+            color,
+            backgroundColor,
+            fontSizePx,
+            fontWeight
+          },
+          { minRatio: mergedOptions.minContrastRatio }
+        );
+        if (issue) {
+          contrastIssues.push(issue);
         }
       }
     }
@@ -1553,6 +1729,7 @@ var LayoutInspector = class {
       viewportFit,
       touchTargetIssues,
       readabilityIssues,
+      contrastIssues,
       occlusionIssues,
       collisionIssues,
       scrollTrapIssues,
@@ -1574,6 +1751,7 @@ var LayoutInspector = class {
       touchTargetIssues,
       viewportFit,
       readabilityIssues,
+      contrastIssues,
       occlusionIssues,
       collisionIssues,
       scrollTrapIssues,

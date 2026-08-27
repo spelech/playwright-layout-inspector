@@ -183,6 +183,20 @@ export interface AccessibleNameIssue {
   suggestion: string;
 }
 
+export interface ColorContrastIssue {
+  selector: string;
+  tagName: string;
+  textSnippet?: string;
+  foregroundColor: string;
+  backgroundColor: string;
+  contrastRatio: number;
+  requiredRatio: number;
+  fontSizePx: number;
+  isBold: boolean;
+  severity: 'critical' | 'warning';
+  suggestion: string;
+}
+
 export interface FocusIndicatorIssue {
   selector: string;
   tagName: string;
@@ -264,6 +278,8 @@ export interface LayoutAuditOptions {
   checkViewportFit?: boolean;
   checkReadability?: boolean;
   minFontSizePx?: number; // default 12
+  checkContrast?: boolean;
+  minContrastRatio?: number; // default 4.5 for AA normal text, 3.0 for large text
   checkOcclusion?: boolean;
   checkCollisions?: boolean;
   checkScrollTraps?: boolean;
@@ -287,6 +303,7 @@ export interface LayoutAuditResult {
   touchTargetIssues: TouchTargetIssue[];
   viewportFit: ViewportFitResult;
   readabilityIssues: ReadabilityIssue[];
+  contrastIssues: ColorContrastIssue[];
   occlusionIssues: OcclusionIssue[];
   collisionIssues: ElementCollisionIssue[];
   scrollTrapIssues: ScrollTrapIssue[];

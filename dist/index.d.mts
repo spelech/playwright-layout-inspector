@@ -1,5 +1,5 @@
-import { D as DevicePreset, B as BoundingBox, V as ViewportInfo, E as ElementComputedStyles, L as LayoutShiftItem, a as LayoutShiftResult, b as ViewportFitResult, T as TouchTargetIssue, R as ReadabilityIssue, O as OcclusionIssue, c as ElementCollisionIssue, S as ScrollTrapIssue, A as AccessibleNameIssue, F as FocusIndicatorIssue, d as ThumbZoneAnalysis, Z as ZoomReflowResult, U as UXGrade, e as OverflowIssue, f as UXScore, g as LayoutAuditResult, h as LayoutAuditOptions } from './matchers-D6oXzV_B.mjs';
-export { i as UXCategoryScore, j as customMatchers } from './matchers-D6oXzV_B.mjs';
+import { D as DevicePreset, B as BoundingBox, V as ViewportInfo, E as ElementComputedStyles, L as LayoutShiftItem, a as LayoutShiftResult, b as ViewportFitResult, T as TouchTargetIssue, R as ReadabilityIssue, O as OcclusionIssue, c as ElementCollisionIssue, S as ScrollTrapIssue, A as AccessibleNameIssue, F as FocusIndicatorIssue, C as ColorContrastIssue, d as ThumbZoneAnalysis, Z as ZoomReflowResult, U as UXGrade, e as OverflowIssue, f as UXScore, g as LayoutAuditResult, h as LayoutAuditOptions } from './matchers-BgW_BA4q.mjs';
+export { i as UXCategoryScore, j as customMatchers } from './matchers-BgW_BA4q.mjs';
 import { Page } from '@playwright/test';
 
 declare const DEVICE_PRESETS: Record<string, DevicePreset>;
@@ -127,6 +127,37 @@ declare function evaluateFocusIndicator(element: {
     isFocused: boolean;
 }): FocusIndicatorIssue | null;
 
+interface RGBA {
+    r: number;
+    g: number;
+    b: number;
+    a: number;
+}
+declare function parseColor(colorStr: string): RGBA | null;
+/**
+ * Calculate WCAG relative luminance according to W3C definition.
+ */
+declare function getRelativeLuminance(rgba: RGBA): number;
+/**
+ * Calculate WCAG contrast ratio between foreground and background.
+ * Returns a ratio between 1 and 21.
+ */
+declare function getContrastRatio(fgColorStr: string, bgColorStr: string): number;
+/**
+ * Evaluate element for WCAG 2.1 Level AA color contrast compliance.
+ */
+declare function evaluateColorContrast(element: {
+    selector: string;
+    tagName: string;
+    textSnippet?: string;
+    color: string;
+    backgroundColor: string;
+    fontSizePx: number;
+    fontWeight: string;
+}, options?: {
+    minRatio?: number;
+}): ColorContrastIssue | null;
+
 type ThumbZone = 'natural' | 'reach' | 'hard';
 declare function categorizeThumbZone(rect: BoundingBox, viewport: ViewportInfo): ThumbZone;
 declare function evaluateThumbZoneErgonomics(interactiveElements: Array<{
@@ -149,6 +180,7 @@ declare function computeUXScore(params: {
     layoutShiftResult?: LayoutShiftResult;
     touchTargetIssues: TouchTargetIssue[];
     readabilityIssues: ReadabilityIssue[];
+    contrastIssues?: ColorContrastIssue[];
     occlusionIssues: OcclusionIssue[];
     collisionIssues?: ElementCollisionIssue[];
     scrollTrapIssues?: ScrollTrapIssue[];
@@ -202,6 +234,9 @@ interface InPageAuditData {
             padding: string;
             fontSize: string;
             lineHeight: string;
+            fontWeight?: string;
+            color?: string;
+            backgroundColor?: string;
             zIndex?: string;
             outlineWidth?: string;
             outlineStyle?: string;
@@ -214,6 +249,7 @@ interface InPageAuditData {
         clientHeight: number;
         isInteractive: boolean;
         isTextOnly: boolean;
+        hasDirectText?: boolean;
         hasAccessibleName: boolean;
         hasSvgOrImgChild: boolean;
         ancestors?: string[];
@@ -276,4 +312,4 @@ declare class LayoutInspector {
     generateReport(result: LayoutAuditResult, outputPath: string): Promise<string>;
 }
 
-export { AccessibleNameIssue, BoundingBox, DEVICE_PRESETS, DevicePreset, ElementCollisionIssue, ElementComputedStyles, type ElementSnapshot, FocusIndicatorIssue, type InPageAuditData, LayoutAuditOptions, LayoutAuditResult, LayoutInspector, LayoutShiftItem, LayoutShiftResult, OcclusionIssue, OverflowIssue, type PointSample, ReadabilityIssue, ScrollTrapIssue, type ThumbZone, ThumbZoneAnalysis, TouchTargetIssue, UXGrade, UXScore, ViewportFitResult, ViewportInfo, ZoomReflowResult, calculateGrade, calculateOverflow, categorizeThumbZone, collectInPageAuditScript, computeAABBOverlapArea, computeElementDisplacement, computeUXScore, evaluateAccessibleName, evaluateElementCollisions, evaluateElementOcclusion, evaluateFocusIndicator, evaluateLayoutShift, evaluateScrollTrap, evaluateTextReadability, evaluateThumbZoneErgonomics, evaluateTouchTarget, evaluateViewportFit, evaluateZoomReflow, generateHtmlReport, generateOverflowRemediation, generateRaycastSamplePoints, getDevicePreset, getInPageAuditFunctionString };
+export { AccessibleNameIssue, BoundingBox, ColorContrastIssue, DEVICE_PRESETS, DevicePreset, ElementCollisionIssue, ElementComputedStyles, type ElementSnapshot, FocusIndicatorIssue, type InPageAuditData, LayoutAuditOptions, LayoutAuditResult, LayoutInspector, LayoutShiftItem, LayoutShiftResult, OcclusionIssue, OverflowIssue, type PointSample, ReadabilityIssue, ScrollTrapIssue, type ThumbZone, ThumbZoneAnalysis, TouchTargetIssue, UXGrade, UXScore, ViewportFitResult, ViewportInfo, ZoomReflowResult, calculateGrade, calculateOverflow, categorizeThumbZone, collectInPageAuditScript, computeAABBOverlapArea, computeElementDisplacement, computeUXScore, evaluateAccessibleName, evaluateColorContrast, evaluateElementCollisions, evaluateElementOcclusion, evaluateFocusIndicator, evaluateLayoutShift, evaluateScrollTrap, evaluateTextReadability, evaluateThumbZoneErgonomics, evaluateTouchTarget, evaluateViewportFit, evaluateZoomReflow, generateHtmlReport, generateOverflowRemediation, generateRaycastSamplePoints, getContrastRatio, getDevicePreset, getInPageAuditFunctionString, getRelativeLuminance, parseColor };

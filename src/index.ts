@@ -9,6 +9,7 @@ export * from './core/occlusion';
 export * from './core/collisions';
 export * from './core/scrollTraps';
 export * from './core/accessibility';
+export * from './core/contrast';
 export * from './core/ergonomics';
 export * from './core/zoomReflow';
 export * from './core/score';

@@ -172,6 +172,19 @@ interface AccessibleNameIssue {
     severity: 'critical' | 'warning';
     suggestion: string;
 }
+interface ColorContrastIssue {
+    selector: string;
+    tagName: string;
+    textSnippet?: string;
+    foregroundColor: string;
+    backgroundColor: string;
+    contrastRatio: number;
+    requiredRatio: number;
+    fontSizePx: number;
+    isBold: boolean;
+    severity: 'critical' | 'warning';
+    suggestion: string;
+}
 interface FocusIndicatorIssue {
     selector: string;
     tagName: string;
@@ -246,6 +259,8 @@ interface LayoutAuditOptions {
     checkViewportFit?: boolean;
     checkReadability?: boolean;
     minFontSizePx?: number;
+    checkContrast?: boolean;
+    minContrastRatio?: number;
     checkOcclusion?: boolean;
     checkCollisions?: boolean;
     checkScrollTraps?: boolean;
@@ -272,6 +287,7 @@ interface LayoutAuditResult {
     touchTargetIssues: TouchTargetIssue[];
     viewportFit: ViewportFitResult;
     readabilityIssues: ReadabilityIssue[];
+    contrastIssues: ColorContrastIssue[];
     occlusionIssues: OcclusionIssue[];
     collisionIssues: ElementCollisionIssue[];
     scrollTrapIssues: ScrollTrapIssue[];
@@ -397,4 +413,4 @@ declare global {
     }
 }
 
-export { type AccessibleNameIssue as A, type BoundingBox as B, type DevicePreset as D, type ElementComputedStyles as E, type FocusIndicatorIssue as F, type LayoutShiftItem as L, type OcclusionIssue as O, type ReadabilityIssue as R, type ScrollTrapIssue as S, type TouchTargetIssue as T, type UXGrade as U, type ViewportInfo as V, type ZoomReflowResult as Z, type LayoutShiftResult as a, type ViewportFitResult as b, type ElementCollisionIssue as c, type ThumbZoneAnalysis as d, type OverflowIssue as e, type UXScore as f, type LayoutAuditResult as g, type LayoutAuditOptions as h, type UXCategoryScore as i, customMatchers as j };
+export { type AccessibleNameIssue as A, type BoundingBox as B, type ColorContrastIssue as C, type DevicePreset as D, type ElementComputedStyles as E, type FocusIndicatorIssue as F, type LayoutShiftItem as L, type OcclusionIssue as O, type ReadabilityIssue as R, type ScrollTrapIssue as S, type TouchTargetIssue as T, type UXGrade as U, type ViewportInfo as V, type ZoomReflowResult as Z, type LayoutShiftResult as a, type ViewportFitResult as b, type ElementCollisionIssue as c, type ThumbZoneAnalysis as d, type OverflowIssue as e, type UXScore as f, type LayoutAuditResult as g, type LayoutAuditOptions as h, type UXCategoryScore as i, customMatchers as j };

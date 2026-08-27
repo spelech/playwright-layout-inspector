@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test';
 import {
   AccessibleNameIssue,
   BoundingBox,
+  ColorContrastIssue,
   DevicePreset,
   ElementCollisionIssue,
   ElementComputedStyles,
@@ -24,6 +25,7 @@ import { computeElementDisplacement, evaluateLayoutShift, ElementSnapshot } from
 import { evaluateViewportFit } from '../core/viewportFit';
 import { evaluateTouchTarget } from '../core/touchTargets';
 import { evaluateTextReadability } from '../core/readability';
+import { evaluateColorContrast } from '../core/contrast';
 import { evaluateElementOcclusion } from '../core/occlusion';
 import { evaluateElementCollisions } from '../core/collisions';
 import { evaluateScrollTrap } from '../core/scrollTraps';
@@ -55,6 +57,7 @@ export class LayoutInspector {
       checkOverflow: true,
       checkViewportFit: true,
       checkReadability: true,
+      checkContrast: true,
       checkOcclusion: true,
       checkCollisions: true,
       checkScrollTraps: true,
@@ -165,6 +168,35 @@ export class LayoutInspector {
         );
         if (issue) {
           readabilityIssues.push(issue);
+        }
+      }
+    }
+
+    // 4b. WCAG 2.1 AA Color Contrast Evaluation
+    const contrastIssues: ColorContrastIssue[] = [];
+    if (mergedOptions.checkContrast !== false) {
+      for (const el of inPageData.elements) {
+        if (!el.hasDirectText) continue;
+        if (!el.textSnippet || el.textSnippet.trim().length === 0) continue;
+        const fontSizePx = parseFloat(el.computedStyles.fontSize) || 16;
+        const color = el.computedStyles.color || 'rgb(0, 0, 0)';
+        const backgroundColor = el.computedStyles.backgroundColor || 'rgb(255, 255, 255)';
+        const fontWeight = el.computedStyles.fontWeight || '400';
+
+        const issue = evaluateColorContrast(
+          {
+            selector: el.selector,
+            tagName: el.tagName,
+            textSnippet: el.textSnippet,
+            color,
+            backgroundColor,
+            fontSizePx,
+            fontWeight
+          },
+          { minRatio: mergedOptions.minContrastRatio }
+        );
+        if (issue) {
+          contrastIssues.push(issue);
         }
       }
     }
@@ -324,6 +356,7 @@ export class LayoutInspector {
       viewportFit,
       touchTargetIssues,
       readabilityIssues,
+      contrastIssues,
       occlusionIssues,
       collisionIssues,
       scrollTrapIssues,
@@ -347,6 +380,7 @@ export class LayoutInspector {
       touchTargetIssues,
       viewportFit,
       readabilityIssues,
+      contrastIssues,
       occlusionIssues,
       collisionIssues,
       scrollTrapIssues,

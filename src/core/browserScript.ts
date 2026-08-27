@@ -43,6 +43,9 @@ export interface InPageAuditData {
       padding: string;
       fontSize: string;
       lineHeight: string;
+      fontWeight?: string;
+      color?: string;
+      backgroundColor?: string;
       zIndex?: string;
       outlineWidth?: string;
       outlineStyle?: string;
@@ -55,6 +58,7 @@ export interface InPageAuditData {
     clientHeight: number;
     isInteractive: boolean;
     isTextOnly: boolean;
+    hasDirectText?: boolean;
     hasAccessibleName: boolean;
     hasSvgOrImgChild: boolean;
     ancestors?: string[];
@@ -187,12 +191,72 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
     const title = el.getAttribute('title');
     const hasAccessibleName = !!(ariaLabel?.trim() || ariaLabelledBy?.trim() || title?.trim() || textContent.length > 0);
 
+    // Detect if element is visually hidden (sr-only, display: none, 0x0)
+    const isVisuallyHidden = comp.display === 'none' ||
+      comp.visibility === 'hidden' ||
+      parseFloat(comp.opacity) === 0 ||
+      el.classList.contains('sr-only') ||
+      (rect.width <= 1 && rect.height <= 1 && comp.overflow === 'hidden');
+
+    // Detect if element has direct text nodes or is a text/input element
+    let hasDirectText = false;
+    if (!isVisuallyHidden) {
+      for (let i = 0; i < el.childNodes.length; i++) {
+        const node = el.childNodes[i];
+        if (node.nodeType === Node.TEXT_NODE && (node.nodeValue || '').trim().length > 0) {
+          hasDirectText = true;
+          break;
+        }
+      }
+      if (tag === 'input' || tag === 'textarea' || tag === 'select' || isTextOnly) {
+        hasDirectText = true;
+      }
+    }
+
     const ancestors: string[] = [];
     let p = el.parentElement;
     while (p && p.tagName.toLowerCase() !== 'html') {
       ancestors.push(getCssSelector(p));
       p = p.parentElement;
     }
+
+    function parseRgba(str: string) {
+      if (!str || str === 'transparent') return null;
+      const m = str.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+      if (!m) return null;
+      return {
+        r: parseInt(m[1], 10),
+        g: parseInt(m[2], 10),
+        b: parseInt(m[3], 10),
+        a: m[4] !== undefined ? parseFloat(m[4]) : 1
+      };
+    }
+
+    const bgStack: { r: number, g: number, b: number, a: number }[] = [];
+    let currBgEl: Element | null = el;
+    while (currBgEl) {
+      const bgStyle = window.getComputedStyle(currBgEl).backgroundColor;
+      const parsed = parseRgba(bgStyle);
+      if (parsed && parsed.a > 0) {
+        bgStack.unshift(parsed);
+      }
+      currBgEl = currBgEl.parentElement;
+    }
+
+    let compBg = { r: 255, g: 255, b: 255, a: 1 };
+    for (const bgLayer of bgStack) {
+      if (bgLayer.a >= 1) {
+        compBg = { r: bgLayer.r, g: bgLayer.g, b: bgLayer.b, a: 1 };
+      } else {
+        compBg = {
+          r: Math.round(bgLayer.r * bgLayer.a + compBg.r * (1 - bgLayer.a)),
+          g: Math.round(bgLayer.g * bgLayer.a + compBg.g * (1 - bgLayer.a)),
+          b: Math.round(bgLayer.b * bgLayer.a + compBg.b * (1 - bgLayer.a)),
+          a: 1
+        };
+      }
+    }
+    const effectiveBg = `rgb(${compBg.r}, ${compBg.g}, ${compBg.b})`;
 
     collectedElements.push({
       selector,
@@ -201,6 +265,7 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
       className: typeof el.className === 'string' ? el.className : '',
       textSnippet,
       ancestors,
+      hasDirectText,
       rect: {
         x: Math.round(rect.x * 100) / 100,
         y: Math.round(rect.y * 100) / 100,
@@ -229,6 +294,9 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
         padding: comp.padding,
         fontSize: comp.fontSize,
         lineHeight: comp.lineHeight,
+        fontWeight: comp.fontWeight,
+        color: comp.color,
+        backgroundColor: effectiveBg,
         zIndex: comp.zIndex,
         outlineWidth: comp.outlineWidth,
         outlineStyle: comp.outlineStyle,
