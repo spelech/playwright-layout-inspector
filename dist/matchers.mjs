@@ -965,8 +965,8 @@ function collectInPageAuditScript(optionsJson = "{}") {
     const isInput = ["input", "select", "textarea"].includes(tag);
     const hasCursorPointer = comp.cursor === "pointer";
     const hasExplicitClickHandler = el.hasAttribute("onclick") || typeof el.onclick === "function";
-    const interactiveAncestor = el.parentElement ? el.parentElement.closest('button, a[href], [role="button"], [role="tab"]') : null;
-    const isDirectInteractive = isButton || isLink || isInput || hasExplicitClickHandler || hasCursorPointer && ["div", "span", "li"].includes(tag);
+    const interactiveAncestor = el.parentElement ? el.parentElement.closest('button, a[href], [role="button"], [role="tab"], label') : null;
+    const isDirectInteractive = (isButton || isLink || isInput || hasExplicitClickHandler || hasCursorPointer && ["div", "span", "li"].includes(tag)) && comp.pointerEvents !== "none" && el.getAttribute("aria-hidden") !== "true";
     const isInteractive = isDirectInteractive && !interactiveAncestor;
     const textContent = (el.textContent || "").trim().replace(/\s+/g, " ");
     const textSnippet = textContent.length > 60 ? textContent.substring(0, 57) + "..." : textContent;
@@ -1103,7 +1103,7 @@ function collectInPageAuditScript(optionsJson = "{}") {
         const topEl = document.elementFromPoint(pt.x, pt.y);
         if (topEl) {
           const topSelector = getCssSelector(topEl);
-          const isTargetOrDescendant = topEl === targetDomEl || targetDomEl.contains(topEl);
+          const isTargetOrDescendant = topEl === targetDomEl || targetDomEl.contains(topEl) || topEl.contains(targetDomEl);
           raycastResults.push({
             point: pt,
             topSelector,
