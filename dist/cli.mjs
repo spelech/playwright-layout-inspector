@@ -145,6 +145,239 @@ function generateOverflowRemediation(issue) {
   return { culpritDescription, suggestedFix };
 }
 
+// src/core/containerOverflow.ts
+function calculateContainerOverflow(childRect, containerInnerBox, thresholdPx = 1.5) {
+  const overflowRightPx = Math.max(0, childRect.right - containerInnerBox.right);
+  const overflowBottomPx = Math.max(0, childRect.bottom - containerInnerBox.bottom);
+  const overflowLeftPx = Math.max(0, containerInnerBox.left - childRect.left);
+  const overflowTopPx = Math.max(0, containerInnerBox.top - childRect.top);
+  const hasOverflow = overflowRightPx > thresholdPx || overflowLeftPx > thresholdPx || overflowBottomPx > thresholdPx;
+  return {
+    overflowRightPx: Math.round(overflowRightPx * 100) / 100,
+    overflowBottomPx: Math.round(overflowBottomPx * 100) / 100,
+    overflowLeftPx: Math.round(overflowLeftPx * 100) / 100,
+    overflowTopPx: Math.round(overflowTopPx * 100) / 100,
+    hasOverflow
+  };
+}
+function isExemptFromContainerOverflow(element) {
+  const {
+    tagName,
+    className = "",
+    role,
+    position = "static",
+    isPopoverOrTooltip,
+    isCornerControl,
+    isDecorative,
+    containerStyles
+  } = element;
+  if (isPopoverOrTooltip || isCornerControl || isDecorative) {
+    return true;
+  }
+  if (position === "fixed") {
+    return true;
+  }
+  tagName.toLowerCase();
+  const classLower = (className || "").toLowerCase();
+  const roleLower = (role || "").toLowerCase();
+  const floatingRoles = ["tooltip", "menu", "listbox", "dialog", "alertdialog"];
+  if (roleLower && floatingRoles.includes(roleLower)) {
+    return true;
+  }
+  const floatingClassKeywords = [
+    "tooltip",
+    "popover",
+    "dropdown",
+    "menu",
+    "toast",
+    "floating",
+    "popper",
+    "modal-backdrop",
+    "select-options",
+    "tippy-box"
+  ];
+  if (floatingClassKeywords.some((keyword) => classLower.includes(keyword))) {
+    return true;
+  }
+  const cornerClassKeywords = [
+    "btn-close",
+    "close-btn",
+    "modal-close",
+    "dialog-close",
+    "badge",
+    "indicator",
+    "chip-corner",
+    "pill"
+  ];
+  if (cornerClassKeywords.some((keyword) => classLower.includes(keyword))) {
+    return true;
+  }
+  if (containerStyles) {
+    const isScrollableX = containerStyles.overflowX === "auto" || containerStyles.overflowX === "scroll";
+    const isScrollableY = containerStyles.overflowY === "auto" || containerStyles.overflowY === "scroll";
+    if (isScrollableX && isScrollableY) {
+      return true;
+    }
+  }
+  return false;
+}
+function generateContainerOverflowRemediation(params) {
+  const {
+    childTagName,
+    childSelector,
+    childRect,
+    childStyles,
+    containerTagName,
+    containerSelector,
+    containerInnerBox,
+    overflowRightPx,
+    overflowBottomPx,
+    overflowLeftPx
+  } = params;
+  const childWidth = Math.round(childRect.width);
+  const containerInnerWidth = Math.round(containerInnerBox.width);
+  let culpritDescription = `Child <${childTagName}> (${childSelector}) of width ${childWidth}px exceeds container <${containerTagName}> (${containerSelector}) inner content boundary (${containerInnerWidth}px)`;
+  let suggestedFix = `Apply 'flex-wrap: wrap' on container or 'max-width: 100%' / 'min-width: 0' on children.`;
+  if (overflowRightPx > 0) {
+    culpritDescription += ` by ${Math.round(overflowRightPx)}px on the right`;
+  }
+  if (overflowLeftPx > 0) {
+    culpritDescription += ` by ${Math.round(overflowLeftPx)}px on the left`;
+  }
+  if (overflowBottomPx > 0) {
+    culpritDescription += ` and ${Math.round(overflowBottomPx)}px on the bottom`;
+  }
+  culpritDescription += ".";
+  if (childStyles.display === "flex" || childStyles.display === "inline-flex" || childStyles.flexWrap === "nowrap") {
+    culpritDescription += ` Multi-item flex row has 'flex-wrap: nowrap' forcing children past container edge.`;
+    suggestedFix = `Set 'flex-wrap: wrap' on flex parent or use responsive grid 'grid-template-columns: repeat(auto-fit, minmax(140px, 1fr))'.`;
+  } else if (childStyles.width && childStyles.width.includes("px") && parseFloat(childStyles.width) > containerInnerWidth) {
+    culpritDescription += ` Explicit fixed width of ${childStyles.width} exceeds container width (${containerInnerWidth}px).`;
+    suggestedFix = `Replace fixed width '${childStyles.width}' with 'width: 100%' / 'max-width: 100%' or responsive layout constraints.`;
+  } else if (childStyles.minWidth && childStyles.minWidth !== "auto" && parseFloat(childStyles.minWidth) > containerInnerWidth) {
+    culpritDescription += ` Fixed min-width '${childStyles.minWidth}' forces element outside parent boundary.`;
+    suggestedFix = `Set 'min-width: 0' or 'min-width: 100%' to allow responsive resizing within container.`;
+  } else if (["input", "select", "textarea", "table", "img", "canvas"].includes(childTagName.toLowerCase())) {
+    suggestedFix = `Ensure <${childTagName}> has 'max-width: 100%; box-sizing: border-box;' and flex children have 'min-width: 0;'.`;
+  }
+  return { culpritDescription, suggestedFix };
+}
+function evaluateContainerOverflow(params) {
+  const { child, container } = params;
+  if (isExemptFromContainerOverflow({
+    tagName: child.tagName,
+    className: child.className,
+    id: child.id,
+    role: child.role,
+    position: child.computedStyles.position,
+    isPopoverOrTooltip: child.isPopoverOrTooltip,
+    isCornerControl: child.isCornerControl,
+    isDecorative: child.isDecorative,
+    containerStyles: container.computedStyles
+  })) {
+    return null;
+  }
+  const overflow = calculateContainerOverflow(child.rect, container.innerBox);
+  if (!overflow.hasOverflow) {
+    return null;
+  }
+  const remediation = generateContainerOverflowRemediation({
+    childTagName: child.tagName,
+    childSelector: child.selector,
+    childRect: child.rect,
+    childStyles: child.computedStyles,
+    containerTagName: container.tagName,
+    containerSelector: container.selector,
+    containerInnerBox: container.innerBox,
+    overflowRightPx: overflow.overflowRightPx,
+    overflowBottomPx: overflow.overflowBottomPx,
+    overflowLeftPx: overflow.overflowLeftPx
+  });
+  const severity = overflow.overflowRightPx > 10 || overflow.overflowLeftPx > 10 || overflow.overflowBottomPx > 20 ? "critical" : "warning";
+  return {
+    selector: child.selector,
+    tagName: child.tagName,
+    id: child.id,
+    className: child.className,
+    boundingBox: child.rect,
+    containerSelector: container.selector,
+    containerTagName: container.tagName,
+    containerBoundingBox: container.rect,
+    containerInnerBox: container.innerBox,
+    overflowRightPx: overflow.overflowRightPx,
+    overflowBottomPx: overflow.overflowBottomPx,
+    overflowLeftPx: overflow.overflowLeftPx,
+    overflowTopPx: overflow.overflowTopPx,
+    computedStyles: child.computedStyles,
+    culpritDescription: remediation.culpritDescription,
+    suggestedFix: remediation.suggestedFix,
+    severity
+  };
+}
+
+// src/core/textFlow.ts
+function generateTextFlowRemediation(anomaly) {
+  const {
+    selector,
+    tagName,
+    textSnippet,
+    anomalyType,
+    word,
+    orphanText,
+    lineCount,
+    elementWidth,
+    computedStyles
+  } = anomaly;
+  switch (anomalyType) {
+    case "mid-word-break": {
+      const brokenWord = word || textSnippet;
+      const details = `Word "${brokenWord}" in <${tagName}> (${selector}) is awkwardly broken across multiple lines without a hyphen due to 'word-break: break-all' or insufficient container width.`;
+      const suggestedFix = `Remove 'word-break: break-all' and use 'overflow-wrap: break-word' or 'hyphens: auto'. Ensure container has sufficient min-width (e.g., 'min-width: fit-content').`;
+      const severity = computedStyles?.wordBreak === "break-all" ? "critical" : "warning";
+      return { details, suggestedFix, severity };
+    }
+    case "broken-multiline-button": {
+      const details = `Interactive button <${tagName}> (${selector}) has text "${textSnippet}" that awkwardly wraps across ${lineCount || 2} lines (trailing: "${orphanText || ""}").`;
+      const suggestedFix = `Set 'white-space: nowrap' or increase button min-width / padding (e.g. min-w-fit, px-4) so the button label stays on a single line.`;
+      return { details, suggestedFix, severity: "critical" };
+    }
+    case "orphan-wrap": {
+      const details = `<${tagName}> (${selector}) text leaves a single orphan word ("${orphanText || ""}") on the last line.`;
+      const suggestedFix = `Apply 'text-wrap: balance' or 'text-wrap: pretty' to balance line lengths, or widen the container boundary.`;
+      return { details, suggestedFix, severity: "warning" };
+    }
+    case "crushed-flex-column": {
+      const width = elementWidth ? Math.round(elementWidth) : 0;
+      const details = `Flex column <${tagName}> (${selector}) is crushed to ${width}px width, causing text clipping or overflowing content in a multi-column row.`;
+      const suggestedFix = `Set 'flex: 1 1 0; min-width: 120px;' on flex items, or add 'flex-wrap: wrap' on the parent container.`;
+      return { details, suggestedFix, severity: "critical" };
+    }
+    default: {
+      return {
+        details: `Text flow anomaly detected in <${tagName}> (${selector}).`,
+        suggestedFix: `Check line wrapping and container constraints.`,
+        severity: "warning"
+      };
+    }
+  }
+}
+function evaluateTextFlow(anomaly) {
+  const remediation = generateTextFlowRemediation(anomaly);
+  return {
+    selector: anomaly.selector,
+    tagName: anomaly.tagName,
+    textSnippet: anomaly.textSnippet,
+    anomalyType: anomaly.anomalyType,
+    details: remediation.details,
+    lineCount: anomaly.lineCount,
+    lastLineWordCount: anomaly.lastLineWordCount,
+    orphanText: anomaly.orphanText,
+    computedStyles: anomaly.computedStyles,
+    severity: remediation.severity,
+    suggestedFix: remediation.suggestedFix
+  };
+}
+
 // src/core/layoutShift.ts
 function computeElementDisplacement(before, after, viewport) {
   const deltaX = after.rect.x - before.rect.x;
@@ -739,6 +972,8 @@ function calculateGrade(score) {
 function computeUXScore(params) {
   const {
     overflowIssues,
+    containerOverflowIssues = [],
+    textFlowIssues = [],
     viewportFit,
     layoutShiftResult,
     touchTargetIssues,
@@ -759,10 +994,14 @@ function computeUXScore(params) {
   for (const issue of overflowIssues) {
     overflowPenalty += issue.severity === "critical" ? 8 : 3;
   }
+  for (const cIssue of containerOverflowIssues) {
+    overflowPenalty += cIssue.severity === "critical" ? 8 : 3;
+  }
   for (const trap of scrollTrapIssues) {
     overflowPenalty += trap.severity === "critical" ? 6 : 2;
   }
   const overflowScoreVal = Math.max(0, Math.min(maxOverflowScore, maxOverflowScore - overflowPenalty));
+  const totalOverflowIssues = overflowIssues.length + containerOverflowIssues.length + scrollTrapIssues.length + viewportFit.issues.length;
   const overflowCategory = {
     name: "Overflow & Viewport Fit",
     score: Math.round(overflowScoreVal * 10) / 10,
@@ -770,8 +1009,8 @@ function computeUXScore(params) {
     maxScore: maxOverflowScore,
     grade: calculateGrade(overflowScoreVal / maxOverflowScore * 100),
     passed: overflowScoreVal >= maxOverflowScore * 0.8,
-    issueCount: overflowIssues.length + scrollTrapIssues.length + viewportFit.issues.length,
-    summary: overflowIssues.length === 0 && scrollTrapIssues.length === 0 && !viewportFit.contentBleeds ? "Perfect viewport fit without horizontal overflow or scroll traps." : `${overflowIssues.length} overflow, ${scrollTrapIssues.length} scroll trap issues detected.`
+    issueCount: totalOverflowIssues,
+    summary: overflowIssues.length === 0 && containerOverflowIssues.length === 0 && scrollTrapIssues.length === 0 && !viewportFit.contentBleeds ? "Perfect viewport and container containment fit without horizontal bleed or scroll traps." : `${overflowIssues.length} viewport overflow, ${containerOverflowIssues.length} container bleed, ${scrollTrapIssues.length} scroll trap issues detected.`
   };
   const maxStabilityScore = 20;
   let stabilityScoreVal = maxStabilityScore;
@@ -818,6 +1057,9 @@ function computeUXScore(params) {
   for (const issue of readabilityIssues) {
     readabilityPenalty += issue.severity === "warning" ? 2 : 1;
   }
+  for (const tf of textFlowIssues) {
+    readabilityPenalty += tf.severity === "critical" ? 5 : 2;
+  }
   for (const occ of occlusionIssues) {
     readabilityPenalty += occ.severity === "critical" ? 5 : 2;
   }
@@ -825,7 +1067,7 @@ function computeUXScore(params) {
     readabilityPenalty += col.severity === "critical" ? 5 : 2;
   }
   const readabilityScoreVal = Math.max(0, Math.min(maxReadabilityScore, maxReadabilityScore - readabilityPenalty));
-  const totalVisibilityIssues = readabilityIssues.length + occlusionIssues.length + collisionIssues.length;
+  const totalVisibilityIssues = readabilityIssues.length + textFlowIssues.length + occlusionIssues.length + collisionIssues.length;
   const readabilityCategory = {
     name: "Readability & Visual Hierarchy",
     score: Math.round(readabilityScoreVal * 10) / 10,
@@ -834,7 +1076,7 @@ function computeUXScore(params) {
     grade: calculateGrade(readabilityScoreVal / maxReadabilityScore * 100),
     passed: readabilityScoreVal >= maxReadabilityScore * 0.8,
     issueCount: totalVisibilityIssues,
-    summary: totalVisibilityIssues === 0 ? "Clean visual hierarchy without element occlusion, text collision, or unreadable truncation." : `${totalVisibilityIssues} text, occlusion, or collision issue(s) detected.`
+    summary: totalVisibilityIssues === 0 ? "Clean visual hierarchy without element occlusion, text collision, awkward word breaks, or unreadable truncation." : `${totalVisibilityIssues} text, flow anomaly, occlusion, or collision issue(s) detected.`
   };
   const maxA11yScore = 15;
   let a11yPenalty = 0;
@@ -930,6 +1172,89 @@ function collectInPageAuditScript(optionsJson = "{}") {
   };
   const allElements = Array.from(document.querySelectorAll("body *"));
   const collectedElements = [];
+  const containerOverflows = [];
+  const textFlowAnomalies = [];
+  function isVisualContainer(targetEl, style) {
+    const t = targetEl.tagName.toLowerCase();
+    if (t === "body" || t === "html") return false;
+    const semantic = ["dialog", "fieldset", "form", "aside", "section", "article", "main", "nav", "details", "table"];
+    if (semantic.includes(t)) return true;
+    const r = targetEl.getAttribute("role");
+    if (r && ["dialog", "alertdialog", "region", "tabpanel", "group", "form"].includes(r)) return true;
+    const c = (typeof targetEl.className === "string" ? targetEl.className : "").toLowerCase();
+    if (/modal|card|panel|dialog|drawer|sheet|popup|box|container|wrapper|frame|window|tabpanel/.test(c)) {
+      return true;
+    }
+    const hasBg = !!(style.backgroundColor && style.backgroundColor !== "rgba(0, 0, 0, 0)" && style.backgroundColor !== "transparent");
+    const hasBorder = !!((parseFloat(style.borderTopWidth || "0") > 0 || parseFloat(style.borderWidth || "0") > 0) && style.borderStyle !== "none");
+    const hasShadow = !!(style.boxShadow && style.boxShadow !== "none");
+    const hasRadius = parseFloat(style.borderRadius || "0") > 0;
+    const hasOverflow = style.overflow !== "visible" || style.overflowX !== "visible" || style.overflowY !== "visible";
+    const hasConstrainedWidth = !!(style.width && style.width.includes("px") || style.maxWidth && style.maxWidth !== "none");
+    return Boolean((hasBg || hasBorder || hasShadow || hasRadius || hasOverflow) && hasConstrainedWidth);
+  }
+  function getClosestVisualContainer(el) {
+    let curr = el.parentElement;
+    while (curr && curr.tagName.toLowerCase() !== "html" && curr.tagName.toLowerCase() !== "body") {
+      const comp = window.getComputedStyle(curr);
+      if (isVisualContainer(curr, comp)) {
+        const cRect = curr.getBoundingClientRect();
+        const pt = parseFloat(comp.paddingTop) || 0;
+        const pr = parseFloat(comp.paddingRight) || 0;
+        const pb = parseFloat(comp.paddingBottom) || 0;
+        const pl = parseFloat(comp.paddingLeft) || 0;
+        const bt = parseFloat(comp.borderTopWidth) || 0;
+        const br = parseFloat(comp.borderRightWidth) || 0;
+        const bb = parseFloat(comp.borderBottomWidth) || 0;
+        const bl = parseFloat(comp.borderLeftWidth) || 0;
+        const innerTop = cRect.top + bt + pt;
+        const innerRight = cRect.right - br - pr;
+        const innerBottom = cRect.bottom - bb - pb;
+        const innerLeft = cRect.left + bl + pl;
+        return {
+          element: curr,
+          selector: getCssSelector(curr),
+          tagName: curr.tagName.toLowerCase(),
+          rect: cRect,
+          innerBox: {
+            top: Math.round(innerTop * 100) / 100,
+            right: Math.round(innerRight * 100) / 100,
+            bottom: Math.round(innerBottom * 100) / 100,
+            left: Math.round(innerLeft * 100) / 100,
+            width: Math.round(Math.max(0, innerRight - innerLeft) * 100) / 100,
+            height: Math.round(Math.max(0, innerBottom - innerTop) * 100) / 100
+          },
+          comp
+        };
+      }
+      curr = curr.parentElement;
+    }
+    return null;
+  }
+  function checkExemption(el, comp, containerComp) {
+    if (comp.position === "fixed") return true;
+    if (el.hasAttribute("popover") || el.popover) return true;
+    const role = el.getAttribute("role") || "";
+    if (["tooltip", "menu", "listbox", "dialog", "alertdialog"].includes(role)) return true;
+    const cls = (typeof el.className === "string" ? el.className : "").toLowerCase();
+    if (/tooltip|popover|dropdown|menu|toast|floating|popper|modal-backdrop|select-options|tippy-box/.test(cls)) {
+      return true;
+    }
+    const ariaLabel = (el.getAttribute("aria-label") || "").toLowerCase();
+    if (/close|btn-close|dismiss|badge|indicator|pill|tag/.test(cls) || ariaLabel.includes("close") || ariaLabel.includes("dismiss")) {
+      if (comp.position === "absolute") {
+        return true;
+      }
+    }
+    if ((containerComp.overflowX === "auto" || containerComp.overflowX === "scroll") && (containerComp.overflowY === "auto" || containerComp.overflowY === "scroll")) {
+      return true;
+    }
+    if (el.getAttribute("aria-hidden") === "true" && comp.pointerEvents === "none") {
+      return true;
+    }
+    return false;
+  }
+  const reportedOverflowParentSelectors = /* @__PURE__ */ new Set();
   for (const el of allElements) {
     let parseRgba2 = function(str) {
       if (!str || str === "transparent") return null;
@@ -959,7 +1284,7 @@ function collectInPageAuditScript(optionsJson = "{}") {
       continue;
     }
     const role = el.getAttribute("role");
-    const isButton = tag === "button" || role === "button" || role === "tab" || role === "menuitem";
+    const isButton = tag === "button" || role === "button" || role === "tab" || role === "menuitem" || typeof el.className === "string" && el.className.includes("btn");
     const isLink = tag === "a" && el.hasAttribute("href");
     const isInput = ["input", "select", "textarea"].includes(tag);
     const hasCursorPointer = comp.cursor === "pointer";
@@ -1019,6 +1344,50 @@ function collectInPageAuditScript(optionsJson = "{}") {
       }
     }
     const effectiveBg = `rgb(${compBg.r}, ${compBg.g}, ${compBg.b})`;
+    const computedStylesObj = {
+      overflow: comp.overflow,
+      overflowX: comp.overflowX,
+      overflowY: comp.overflowY,
+      width: comp.width,
+      minWidth: comp.minWidth,
+      maxWidth: comp.maxWidth,
+      height: comp.height,
+      minHeight: comp.minHeight,
+      maxHeight: comp.maxHeight,
+      transform: comp.transform,
+      display: comp.display,
+      position: comp.position,
+      boxSizing: comp.boxSizing,
+      margin: comp.margin,
+      padding: comp.padding,
+      paddingTop: comp.paddingTop,
+      paddingRight: comp.paddingRight,
+      paddingBottom: comp.paddingBottom,
+      paddingLeft: comp.paddingLeft,
+      borderTopWidth: comp.borderTopWidth,
+      borderRightWidth: comp.borderRightWidth,
+      borderBottomWidth: comp.borderBottomWidth,
+      borderLeftWidth: comp.borderLeftWidth,
+      wordBreak: comp.wordBreak,
+      overflowWrap: comp.overflowWrap,
+      whiteSpace: comp.whiteSpace,
+      textWrap: comp.textWrap || comp.whiteSpace,
+      flexDirection: comp.flexDirection,
+      flexWrap: comp.flexWrap,
+      flexShrink: comp.flexShrink,
+      flexGrow: comp.flexGrow,
+      flexBasis: comp.flexBasis,
+      fontSize: comp.fontSize,
+      lineHeight: comp.lineHeight,
+      fontWeight: comp.fontWeight,
+      color: comp.color,
+      backgroundColor: effectiveBg,
+      zIndex: comp.zIndex,
+      outlineWidth: comp.outlineWidth,
+      outlineStyle: comp.outlineStyle,
+      outlineColor: comp.outlineColor,
+      boxShadow: comp.boxShadow
+    };
     collectedElements.push({
       selector,
       tagName: tag,
@@ -1037,33 +1406,7 @@ function collectInPageAuditScript(optionsJson = "{}") {
         bottom: Math.round(rect.bottom * 100) / 100,
         left: Math.round(rect.left * 100) / 100
       },
-      computedStyles: {
-        overflow: comp.overflow,
-        overflowX: comp.overflowX,
-        overflowY: comp.overflowY,
-        width: comp.width,
-        minWidth: comp.minWidth,
-        maxWidth: comp.maxWidth,
-        height: comp.height,
-        minHeight: comp.minHeight,
-        maxHeight: comp.maxHeight,
-        transform: comp.transform,
-        display: comp.display,
-        position: comp.position,
-        boxSizing: comp.boxSizing,
-        margin: comp.margin,
-        padding: comp.padding,
-        fontSize: comp.fontSize,
-        lineHeight: comp.lineHeight,
-        fontWeight: comp.fontWeight,
-        color: comp.color,
-        backgroundColor: effectiveBg,
-        zIndex: comp.zIndex,
-        outlineWidth: comp.outlineWidth,
-        outlineStyle: comp.outlineStyle,
-        outlineColor: comp.outlineColor,
-        boxShadow: comp.boxShadow
-      },
+      computedStyles: computedStylesObj,
       scrollWidth: el.scrollWidth,
       clientWidth: el.clientWidth,
       scrollHeight: el.scrollHeight,
@@ -1077,6 +1420,201 @@ function collectInPageAuditScript(optionsJson = "{}") {
       ariaLabelledBy,
       title
     });
+    const visualContainer = getClosestVisualContainer(el);
+    if (visualContainer && visualContainer.element !== el) {
+      const isExempt = checkExemption(el, comp, visualContainer.comp);
+      const inner = visualContainer.innerBox;
+      const overRight = Math.max(0, rect.right - inner.right);
+      const overLeft = Math.max(0, inner.left - rect.left);
+      const overBottom = Math.max(0, rect.bottom - inner.bottom);
+      const overTop = Math.max(0, inner.top - rect.top);
+      if ((overRight > 1.5 || overLeft > 1.5 || overBottom > 2) && !isExempt) {
+        const hasOverflowingAncestor = ancestors.some((anc) => reportedOverflowParentSelectors.has(anc));
+        if (!hasOverflowingAncestor) {
+          reportedOverflowParentSelectors.add(selector);
+          containerOverflows.push({
+            childSelector: selector,
+            childTagName: tag,
+            childId: el.id || "",
+            childClassName: typeof el.className === "string" ? el.className : "",
+            childRect: {
+              x: Math.round(rect.x * 100) / 100,
+              y: Math.round(rect.y * 100) / 100,
+              width: Math.round(rect.width * 100) / 100,
+              height: Math.round(rect.height * 100) / 100,
+              top: Math.round(rect.top * 100) / 100,
+              right: Math.round(rect.right * 100) / 100,
+              bottom: Math.round(rect.bottom * 100) / 100,
+              left: Math.round(rect.left * 100) / 100
+            },
+            childStyles: computedStylesObj,
+            childRole: role,
+            containerSelector: visualContainer.selector,
+            containerTagName: visualContainer.tagName,
+            containerRect: {
+              x: Math.round(visualContainer.rect.x * 100) / 100,
+              y: Math.round(visualContainer.rect.y * 100) / 100,
+              width: Math.round(visualContainer.rect.width * 100) / 100,
+              height: Math.round(visualContainer.rect.height * 100) / 100,
+              top: Math.round(visualContainer.rect.top * 100) / 100,
+              right: Math.round(visualContainer.rect.right * 100) / 100,
+              bottom: Math.round(visualContainer.rect.bottom * 100) / 100,
+              left: Math.round(visualContainer.rect.left * 100) / 100
+            },
+            containerInnerBox: inner,
+            containerStyles: {
+              overflowX: visualContainer.comp.overflowX,
+              overflowY: visualContainer.comp.overflowY
+            },
+            overflowRightPx: Math.round(overRight * 100) / 100,
+            overflowBottomPx: Math.round(overBottom * 100) / 100,
+            overflowLeftPx: Math.round(overLeft * 100) / 100,
+            overflowTopPx: Math.round(overTop * 100) / 100,
+            isExempt
+          });
+        }
+      }
+    }
+    if (!["pre", "code", "kbd", "samp", "textarea", "input", "style", "script"].includes(tag)) {
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      let textNode;
+      while (textNode = walker.nextNode()) {
+        const val = textNode.nodeValue || "";
+        if (!val.trim()) continue;
+        const regex = /[a-zA-Z]{4,}/g;
+        let match;
+        while ((match = regex.exec(val)) !== null) {
+          const word = match[0];
+          const startIndex = match.index;
+          const endIndex = startIndex + word.length;
+          try {
+            const range = document.createRange();
+            range.setStart(textNode, startIndex);
+            range.setEnd(textNode, endIndex);
+            const rects = range.getClientRects();
+            if (rects.length > 1) {
+              const firstTop = rects[0].top;
+              const lastTop = rects[rects.length - 1].top;
+              if (Math.abs(lastTop - firstTop) > 3) {
+                textFlowAnomalies.push({
+                  selector,
+                  tagName: tag,
+                  textSnippet,
+                  anomalyType: "mid-word-break",
+                  word,
+                  computedStyles: {
+                    wordBreak: comp.wordBreak,
+                    overflowWrap: comp.overflowWrap
+                  }
+                });
+                break;
+              }
+            }
+          } catch {
+          }
+        }
+      }
+    }
+    const isHeadingTag = ["h1", "h2", "h3", "h4", "h5", "h6"].includes(tag);
+    const isLabelTag = tag === "label" || typeof el.className === "string" && /badge|chip|pill|tag/.test(el.className);
+    if ((isButton || isHeadingTag || isLabelTag) && textContent && textContent.length >= 5) {
+      const words = textContent.split(/\s+/).filter((w) => w.length > 0);
+      if (words.length >= 2) {
+        const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+        const measuredWords = [];
+        let tNode = null;
+        while (tNode = walker.nextNode()) {
+          const val = tNode.nodeValue || "";
+          const nodeWords = val.trim().split(/\s+/).filter((w) => w.length > 0);
+          let searchPos = 0;
+          for (const w of nodeWords) {
+            const wordStart = val.indexOf(w, searchPos);
+            if (wordStart === -1) continue;
+            searchPos = wordStart + w.length;
+            try {
+              const r = document.createRange();
+              r.setStart(tNode, wordStart);
+              r.setEnd(tNode, wordStart + w.length);
+              const rRect = r.getBoundingClientRect();
+              if (rRect.width > 0 && rRect.height > 0) {
+                measuredWords.push({ top: rRect.top, word: w });
+              }
+            } catch {
+            }
+          }
+        }
+        const lineGroups = [];
+        for (const item of measuredWords) {
+          let placed = false;
+          for (const group of lineGroups) {
+            if (Math.abs(item.top - group.top) < 6) {
+              group.words.push(item.word);
+              placed = true;
+              break;
+            }
+          }
+          if (!placed) {
+            lineGroups.push({ top: item.top, words: [item.word] });
+          }
+        }
+        const lines = lineGroups.map((g) => g.words);
+        if (lines.length > 1) {
+          const lastLine = lines[lines.length - 1];
+          const lastLineText = lastLine.join(" ");
+          if (isButton && textContent.length < 40) {
+            textFlowAnomalies.push({
+              selector,
+              tagName: tag,
+              textSnippet,
+              anomalyType: "broken-multiline-button",
+              lineCount: lines.length,
+              orphanText: lastLineText,
+              lastLineWordCount: lastLine.length,
+              computedStyles: {
+                whiteSpace: comp.whiteSpace,
+                textWrap: comp.textWrap
+              }
+            });
+          } else if ((isHeadingTag || isLabelTag) && lastLine.length === 1 && lines[0].length >= 2) {
+            textFlowAnomalies.push({
+              selector,
+              tagName: tag,
+              textSnippet,
+              anomalyType: "orphan-wrap",
+              lineCount: lines.length,
+              orphanText: lastLineText,
+              lastLineWordCount: 1,
+              computedStyles: {
+                textWrap: comp.textWrap || "normal",
+                whiteSpace: comp.whiteSpace
+              }
+            });
+          }
+        }
+      }
+    }
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const parentComp = window.getComputedStyle(parentEl);
+      if (parentComp.display === "flex" || parentComp.display === "inline-flex") {
+        const isRow = !parentComp.flexDirection || parentComp.flexDirection.startsWith("row");
+        if (isRow && rect.width < 75 && el.scrollWidth > el.clientWidth + 3 && textContent.length > 8) {
+          textFlowAnomalies.push({
+            selector,
+            tagName: tag,
+            textSnippet,
+            anomalyType: "crushed-flex-column",
+            elementWidth: rect.width,
+            scrollWidth: el.scrollWidth,
+            clientWidth: el.clientWidth,
+            computedStyles: {
+              display: comp.display,
+              flex: comp.flex
+            }
+          });
+        }
+      }
+    }
   }
   const occlusions = [];
   for (const item of collectedElements) {
@@ -1124,6 +1662,8 @@ function collectInPageAuditScript(optionsJson = "{}") {
   return {
     viewport: vp,
     elements: collectedElements,
+    containerOverflows,
+    textFlowAnomalies,
     occlusions
   };
 }
@@ -1136,10 +1676,12 @@ function generateHtmlReport(result) {
     device,
     viewport,
     uxScore,
-    overflowIssues,
-    touchTargetIssues,
+    overflowIssues = [],
+    containerOverflowIssues = [],
+    textFlowIssues = [],
+    touchTargetIssues = [],
     viewportFit,
-    readabilityIssues,
+    readabilityIssues = [],
     occlusionIssues = [],
     collisionIssues = [],
     scrollTrapIssues = [],
@@ -1150,7 +1692,7 @@ function generateHtmlReport(result) {
     screenshotBase64,
     executionTimeMs
   } = result;
-  const totalIssues = overflowIssues.length + touchTargetIssues.length + readabilityIssues.length + occlusionIssues.length + collisionIssues.length + scrollTrapIssues.length + accessibleNameIssues.length + focusIndicatorIssues.length + viewportFit.issues.length;
+  const totalIssues = overflowIssues.length + containerOverflowIssues.length + textFlowIssues.length + touchTargetIssues.length + readabilityIssues.length + occlusionIssues.length + collisionIssues.length + scrollTrapIssues.length + accessibleNameIssues.length + focusIndicatorIssues.length + (viewportFit ? viewportFit.issues.length : 0);
   const scoreColor = uxScore.totalScore >= 85 ? "#10b981" : uxScore.totalScore >= 70 ? "#f59e0b" : "#ef4444";
   const gradeBadgeClass = uxScore.grade.startsWith("A") ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40" : uxScore.grade.startsWith("B") ? "bg-amber-500/20 text-amber-300 border-amber-500/40" : "bg-rose-500/20 text-rose-300 border-rose-500/40";
   return `<!DOCTYPE html>
@@ -1283,7 +1825,7 @@ function generateHtmlReport(result) {
           <h2 class="text-xl font-bold text-white flex items-center gap-2">
             <span>\u{1F6E0}\uFE0F</span> Issues & Remediation (${totalIssues})
           </h2>
-          <p class="text-xs text-slate-400">Actionable layout, overflow, collision, and accessibility fixes</p>
+          <p class="text-xs text-slate-400">Actionable layout, container overflow, text wrap, collision, and accessibility fixes</p>
         </div>
       </div>
 
@@ -1291,21 +1833,21 @@ function generateHtmlReport(result) {
         <div class="py-12 text-center text-slate-400 space-y-2">
           <div class="text-4xl">\u{1F389}</div>
           <p class="text-base font-semibold text-slate-200">No layout or UX issues detected!</p>
-          <p class="text-xs">Your layout complies with responsive viewport fit, touch target standards, accessibility, and stability rules.</p>
+          <p class="text-xs">Your layout complies with responsive viewport fit, container containment, text flow, touch target standards, accessibility, and stability rules.</p>
         </div>
       ` : `
         <div class="space-y-4">
           <!-- Viewport Fit Issues -->
-          ${viewportFit.issues.map((iss) => `
+          ${viewportFit ? viewportFit.issues.map((iss) => `
             <div class="p-4 bg-rose-950/30 border border-rose-500/30 rounded-xl space-y-2">
               <div class="flex items-center gap-2 text-rose-400 font-semibold text-sm">
                 <span>\u{1F6A8} Viewport Constraint Issue</span>
               </div>
               <p class="text-sm text-slate-200">${escapeHtml(iss)}</p>
             </div>
-          `).join("")}
+          `).join("") : ""}
 
-          <!-- Overflow Issues -->
+          <!-- Viewport Overflow Issues -->
           ${overflowIssues.map((issue) => `
             <div class="p-4 bg-slate-950/80 border border-red-500/30 rounded-xl space-y-3">
               <div class="flex items-start justify-between gap-4">
@@ -1324,6 +1866,59 @@ function generateHtmlReport(result) {
               <p class="text-xs text-slate-300">${escapeHtml(issue.culpritDescription)}</p>
               <div class="text-xs text-emerald-300 bg-emerald-950/30 p-2.5 rounded-lg border border-emerald-500/20 font-mono">
                 \u{1F4A1} <span class="font-bold text-emerald-400">Fix:</span> ${escapeHtml(issue.suggestedFix)}
+              </div>
+            </div>
+          `).join("")}
+
+          <!-- Container Overflow Issues -->
+          ${containerOverflowIssues.map((cIssue) => `
+            <div class="p-4 bg-slate-950/80 border border-orange-500/30 rounded-xl space-y-3">
+              <div class="flex items-start justify-between gap-4">
+                <div class="space-y-1">
+                  <div class="flex items-center gap-2">
+                    <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-orange-500/20 text-orange-400 border border-orange-500/30">
+                      ${cIssue.severity}
+                    </span>
+                    <span class="text-sm font-semibold text-slate-100">Container Geometric Bleed (+${Math.round(cIssue.overflowRightPx || cIssue.overflowBottomPx || cIssue.overflowLeftPx)}px)</span>
+                  </div>
+                  <div class="flex flex-wrap items-center gap-2 text-xs font-mono">
+                    <span class="text-rose-400 bg-rose-950/40 px-2 py-0.5 rounded border border-rose-500/20">
+                      Child: ${escapeHtml(cIssue.selector)}
+                    </span>
+                    <span class="text-slate-500">inside</span>
+                    <span class="text-indigo-400 bg-indigo-950/40 px-2 py-0.5 rounded border border-indigo-500/20">
+                      Container: ${escapeHtml(cIssue.containerSelector)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <p class="text-xs text-slate-300">${escapeHtml(cIssue.culpritDescription)}</p>
+              <div class="text-xs text-emerald-300 bg-emerald-950/30 p-2.5 rounded-lg border border-emerald-500/20 font-mono">
+                \u{1F4A1} <span class="font-bold text-emerald-400">Fix:</span> ${escapeHtml(cIssue.suggestedFix)}
+              </div>
+            </div>
+          `).join("")}
+
+          <!-- Text Flow & Wrap Anomaly Issues -->
+          ${textFlowIssues.map((tf) => `
+            <div class="p-4 bg-slate-950/80 border border-yellow-500/30 rounded-xl space-y-3">
+              <div class="flex items-start justify-between gap-4">
+                <div class="space-y-1">
+                  <div class="flex items-center gap-2">
+                    <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+                      ${tf.anomalyType.replace(/-/g, " ")}
+                    </span>
+                    <span class="text-sm font-semibold text-slate-100">Text Flow / Wrapping Anomaly</span>
+                  </div>
+                  <div class="text-xs font-mono text-indigo-400 bg-indigo-950/40 px-2 py-1 rounded border border-indigo-500/20 inline-block">
+                    ${escapeHtml(tf.selector)}
+                  </div>
+                  ${tf.textSnippet ? `<span class="text-xs text-slate-400 italic font-mono ml-2">&ldquo;${escapeHtml(tf.textSnippet)}&rdquo;</span>` : ""}
+                </div>
+              </div>
+              <p class="text-xs text-slate-300">${escapeHtml(tf.details)}</p>
+              <div class="text-xs text-emerald-300 bg-emerald-950/30 p-2.5 rounded-lg border border-emerald-500/20 font-mono">
+                \u{1F4A1} <span class="font-bold text-emerald-400">Fix:</span> ${escapeHtml(tf.suggestedFix)}
               </div>
             </div>
           `).join("")}
@@ -1449,6 +2044,8 @@ var LayoutInspector = class {
     const mergedOptions = {
       checkTouchTargets: true,
       checkOverflow: true,
+      checkContainerOverflow: true,
+      checkTextFlow: true,
       checkReadability: true,
       checkContrast: true,
       checkOcclusion: true,
@@ -1502,6 +2099,33 @@ var LayoutInspector = class {
         }
       }
     }
+    const containerOverflowIssues = [];
+    if (mergedOptions.checkContainerOverflow !== false && inPageData.containerOverflows) {
+      for (const cov of inPageData.containerOverflows) {
+        if (cov.isExempt) continue;
+        const issue = evaluateContainerOverflow({
+          child: {
+            selector: cov.childSelector,
+            tagName: cov.childTagName,
+            id: cov.childId,
+            className: cov.childClassName,
+            rect: cov.childRect,
+            computedStyles: cov.childStyles,
+            role: cov.childRole
+          },
+          container: {
+            selector: cov.containerSelector,
+            tagName: cov.containerTagName,
+            rect: cov.containerRect,
+            innerBox: cov.containerInnerBox,
+            computedStyles: cov.containerStyles
+          }
+        });
+        if (issue) {
+          containerOverflowIssues.push(issue);
+        }
+      }
+    }
     const touchTargetIssues = [];
     const interactiveElements = inPageData.elements.filter((e) => e.isInteractive);
     if (mergedOptions.checkTouchTargets !== false) {
@@ -1546,6 +2170,15 @@ var LayoutInspector = class {
         );
         if (issue) {
           readabilityIssues.push(issue);
+        }
+      }
+    }
+    const textFlowIssues = [];
+    if (mergedOptions.checkTextFlow !== false && inPageData.textFlowAnomalies) {
+      for (const anomaly of inPageData.textFlowAnomalies) {
+        const issue = evaluateTextFlow(anomaly);
+        if (issue) {
+          textFlowIssues.push(issue);
         }
       }
     }
@@ -1703,6 +2336,8 @@ var LayoutInspector = class {
     }
     const uxScore = computeUXScore({
       overflowIssues,
+      containerOverflowIssues,
+      textFlowIssues,
       viewportFit,
       touchTargetIssues,
       readabilityIssues,
@@ -1725,6 +2360,8 @@ var LayoutInspector = class {
       viewport,
       uxScore,
       overflowIssues,
+      containerOverflowIssues,
+      textFlowIssues,
       touchTargetIssues,
       viewportFit,
       readabilityIssues,
@@ -1899,10 +2536,26 @@ Examples:
       console.log(`  \u{1F441}\uFE0F  Readability:     ${score.categories.readabilityAndVisibility.score}/${score.categories.readabilityAndVisibility.maxScore} (Issues: ${audit.readabilityIssues.length})`);
       console.log("========================================\n");
       if (audit.overflowIssues.length > 0) {
-        console.log("\u{1F6A8} Overflow Culprits:");
+        console.log("\u{1F6A8} Viewport Overflow Culprits:");
         for (const iss of audit.overflowIssues) {
           console.log(`  - ${iss.selector} (+${Math.round(iss.overflowRightPx)}px bleed)`);
           console.log(`    Fix: ${iss.suggestedFix}`);
+        }
+        console.log("");
+      }
+      if (audit.containerOverflowIssues.length > 0) {
+        console.log("\u{1F6A8} Container Overflow Culprits:");
+        for (const cIss of audit.containerOverflowIssues) {
+          console.log(`  - ${cIss.selector} inside ${cIss.containerSelector} (+${Math.round(cIss.overflowRightPx || cIss.overflowBottomPx || cIss.overflowLeftPx)}px bleed)`);
+          console.log(`    Fix: ${cIss.suggestedFix}`);
+        }
+        console.log("");
+      }
+      if (audit.textFlowIssues.length > 0) {
+        console.log("\u{1F4DD} Text Flow & Wrap Anomalies:");
+        for (const tf of audit.textFlowIssues) {
+          console.log(`  - [${tf.anomalyType}] ${tf.selector}: ${tf.details}`);
+          console.log(`    Fix: ${tf.suggestedFix}`);
         }
         console.log("");
       }

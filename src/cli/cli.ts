@@ -106,10 +106,28 @@ Examples:
       console.log('========================================\n');
 
       if (audit.overflowIssues.length > 0) {
-        console.log('🚨 Overflow Culprits:');
+        console.log('🚨 Viewport Overflow Culprits:');
         for (const iss of audit.overflowIssues) {
           console.log(`  - ${iss.selector} (+${Math.round(iss.overflowRightPx)}px bleed)`);
           console.log(`    Fix: ${iss.suggestedFix}`);
+        }
+        console.log('');
+      }
+
+      if (audit.containerOverflowIssues.length > 0) {
+        console.log('🚨 Container Overflow Culprits:');
+        for (const cIss of audit.containerOverflowIssues) {
+          console.log(`  - ${cIss.selector} inside ${cIss.containerSelector} (+${Math.round(cIss.overflowRightPx || cIss.overflowBottomPx || cIss.overflowLeftPx)}px bleed)`);
+          console.log(`    Fix: ${cIss.suggestedFix}`);
+        }
+        console.log('');
+      }
+
+      if (audit.textFlowIssues.length > 0) {
+        console.log('📝 Text Flow & Wrap Anomalies:');
+        for (const tf of audit.textFlowIssues) {
+          console.log(`  - [${tf.anomalyType}] ${tf.selector}: ${tf.details}`);
+          console.log(`    Fix: ${tf.suggestedFix}`);
         }
         console.log('');
       }

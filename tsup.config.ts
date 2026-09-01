@@ -13,5 +13,6 @@ export default defineConfig({
   treeshake: true,
   minify: false,
   splitting: false,
-  target: 'es2022'
+  target: 'es2022',
+  external: ['@playwright/test', 'playwright']
 });

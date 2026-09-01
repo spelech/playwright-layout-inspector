@@ -1,5 +1,5 @@
-import { D as DevicePreset, B as BoundingBox, V as ViewportInfo, E as ElementComputedStyles, L as LayoutShiftItem, a as LayoutShiftResult, b as ViewportFitResult, T as TouchTargetIssue, R as ReadabilityIssue, O as OcclusionIssue, c as ElementCollisionIssue, S as ScrollTrapIssue, A as AccessibleNameIssue, F as FocusIndicatorIssue, C as ColorContrastIssue, d as ThumbZoneAnalysis, Z as ZoomReflowResult, U as UXGrade, e as OverflowIssue, f as UXScore, g as LayoutAuditResult, h as LayoutAuditOptions } from './matchers-BgW_BA4q.mjs';
-export { i as UXCategoryScore, j as customMatchers } from './matchers-BgW_BA4q.mjs';
+import { D as DevicePreset, B as BoundingBox, V as ViewportInfo, E as ElementComputedStyles, C as ContainerInnerBox, a as ContainerOverflowIssue, T as TextFlowAnomalyType, b as TextFlowIssue, L as LayoutShiftItem, c as LayoutShiftResult, d as ViewportFitResult, e as TouchTargetIssue, R as ReadabilityIssue, O as OcclusionIssue, f as ElementCollisionIssue, S as ScrollTrapIssue, A as AccessibleNameIssue, F as FocusIndicatorIssue, g as ColorContrastIssue, h as ThumbZoneAnalysis, Z as ZoomReflowResult, U as UXGrade, i as OverflowIssue, j as UXScore, k as LayoutAuditResult, l as LayoutAuditOptions } from './matchers-CLiGOt2H.mjs';
+export { m as UXCategoryScore, n as customMatchers } from './matchers-CLiGOt2H.mjs';
 import { Page } from '@playwright/test';
 
 declare const DEVICE_PRESETS: Record<string, DevicePreset>;
@@ -22,6 +22,95 @@ declare function generateOverflowRemediation(issue: {
     culpritDescription: string;
     suggestedFix: string;
 };
+
+declare function calculateContainerOverflow(childRect: BoundingBox, containerInnerBox: ContainerInnerBox, thresholdPx?: number): {
+    overflowRightPx: number;
+    overflowBottomPx: number;
+    overflowLeftPx: number;
+    overflowTopPx: number;
+    hasOverflow: boolean;
+};
+declare function isExemptFromContainerOverflow(element: {
+    tagName: string;
+    className?: string;
+    id?: string;
+    role?: string | null;
+    position?: string;
+    isPopoverOrTooltip?: boolean;
+    isCornerControl?: boolean;
+    isDecorative?: boolean;
+    containerStyles?: {
+        overflowX?: string;
+        overflowY?: string;
+    };
+}): boolean;
+declare function generateContainerOverflowRemediation(params: {
+    childTagName: string;
+    childSelector: string;
+    childRect: BoundingBox;
+    childStyles: ElementComputedStyles;
+    containerTagName: string;
+    containerSelector: string;
+    containerInnerBox: ContainerInnerBox;
+    overflowRightPx: number;
+    overflowBottomPx: number;
+    overflowLeftPx: number;
+}): {
+    culpritDescription: string;
+    suggestedFix: string;
+};
+declare function evaluateContainerOverflow(params: {
+    child: {
+        selector: string;
+        tagName: string;
+        id?: string;
+        className?: string;
+        rect: BoundingBox;
+        computedStyles: ElementComputedStyles;
+        role?: string | null;
+        isPopoverOrTooltip?: boolean;
+        isCornerControl?: boolean;
+        isDecorative?: boolean;
+    };
+    container: {
+        selector: string;
+        tagName: string;
+        rect: BoundingBox;
+        innerBox: ContainerInnerBox;
+        computedStyles?: {
+            overflowX?: string;
+            overflowY?: string;
+        };
+    };
+}): ContainerOverflowIssue | null;
+
+interface RawTextFlowAnomaly {
+    selector: string;
+    tagName: string;
+    textSnippet: string;
+    anomalyType: TextFlowAnomalyType;
+    word?: string;
+    orphanText?: string;
+    lineCount?: number;
+    lastLineWordCount?: number;
+    elementWidth?: number;
+    scrollWidth?: number;
+    clientWidth?: number;
+    computedStyles?: {
+        wordBreak?: string;
+        overflowWrap?: string;
+        whiteSpace?: string;
+        textWrap?: string;
+        display?: string;
+        flex?: string;
+    };
+}
+declare function generateTextFlowRemediation(anomaly: RawTextFlowAnomaly): {
+    details: string;
+    suggestedFix: string;
+    severity: 'critical' | 'warning';
+};
+declare function evaluateTextFlow(anomaly: RawTextFlowAnomaly): TextFlowIssue;
 
 interface ElementSnapshot {
     selector: string;
@@ -176,6 +265,8 @@ declare function evaluateZoomReflow(params: {
 declare function calculateGrade(score: number): UXGrade;
 declare function computeUXScore(params: {
     overflowIssues: OverflowIssue[];
+    containerOverflowIssues?: ContainerOverflowIssue[];
+    textFlowIssues?: TextFlowIssue[];
     viewportFit: ViewportFitResult;
     layoutShiftResult?: LayoutShiftResult;
     touchTargetIssues: TouchTargetIssue[];
@@ -232,6 +323,23 @@ interface InPageAuditData {
             boxSizing: string;
             margin: string;
             padding: string;
+            paddingTop?: string;
+            paddingRight?: string;
+            paddingBottom?: string;
+            paddingLeft?: string;
+            borderTopWidth?: string;
+            borderRightWidth?: string;
+            borderBottomWidth?: string;
+            borderLeftWidth?: string;
+            wordBreak?: string;
+            overflowWrap?: string;
+            whiteSpace?: string;
+            textWrap?: string;
+            flexDirection?: string;
+            flexWrap?: string;
+            flexShrink?: string;
+            flexGrow?: string;
+            flexBasis?: string;
             fontSize: string;
             lineHeight: string;
             fontWeight?: string;
@@ -257,6 +365,71 @@ interface InPageAuditData {
         ariaLabel?: string | null;
         ariaLabelledBy?: string | null;
         title?: string | null;
+    }>;
+    containerOverflows: Array<{
+        childSelector: string;
+        childTagName: string;
+        childId: string;
+        childClassName: string;
+        childRect: {
+            x: number;
+            y: number;
+            width: number;
+            height: number;
+            top: number;
+            right: number;
+            bottom: number;
+            left: number;
+        };
+        childStyles: any;
+        childRole?: string | null;
+        containerSelector: string;
+        containerTagName: string;
+        containerRect: {
+            x: number;
+            y: number;
+            width: number;
+            height: number;
+            top: number;
+            right: number;
+            bottom: number;
+            left: number;
+        };
+        containerInnerBox: {
+            top: number;
+            right: number;
+            bottom: number;
+            left: number;
+            width: number;
+            height: number;
+        };
+        containerStyles: any;
+        overflowRightPx: number;
+        overflowBottomPx: number;
+        overflowLeftPx: number;
+        overflowTopPx: number;
+        isExempt: boolean;
+    }>;
+    textFlowAnomalies: Array<{
+        selector: string;
+        tagName: string;
+        textSnippet: string;
+        anomalyType: 'mid-word-break' | 'orphan-wrap' | 'broken-multiline-button' | 'crushed-flex-column';
+        word?: string;
+        orphanText?: string;
+        lineCount?: number;
+        lastLineWordCount?: number;
+        elementWidth?: number;
+        scrollWidth?: number;
+        clientWidth?: number;
+        computedStyles?: {
+            wordBreak?: string;
+            overflowWrap?: string;
+            whiteSpace?: string;
+            textWrap?: string;
+            display?: string;
+            flex?: string;
+        };
     }>;
     occlusions: Array<{
         selector: string;
@@ -312,4 +485,4 @@ declare class LayoutInspector {
     generateReport(result: LayoutAuditResult, outputPath: string): Promise<string>;
 }
 
-export { AccessibleNameIssue, BoundingBox, ColorContrastIssue, DEVICE_PRESETS, DevicePreset, ElementCollisionIssue, ElementComputedStyles, type ElementSnapshot, FocusIndicatorIssue, type InPageAuditData, LayoutAuditOptions, LayoutAuditResult, LayoutInspector, LayoutShiftItem, LayoutShiftResult, OcclusionIssue, OverflowIssue, type PointSample, ReadabilityIssue, ScrollTrapIssue, type ThumbZone, ThumbZoneAnalysis, TouchTargetIssue, UXGrade, UXScore, ViewportFitResult, ViewportInfo, ZoomReflowResult, calculateGrade, calculateOverflow, categorizeThumbZone, collectInPageAuditScript, computeAABBOverlapArea, computeElementDisplacement, computeUXScore, evaluateAccessibleName, evaluateColorContrast, evaluateElementCollisions, evaluateElementOcclusion, evaluateFocusIndicator, evaluateLayoutShift, evaluateScrollTrap, evaluateTextReadability, evaluateThumbZoneErgonomics, evaluateTouchTarget, evaluateViewportFit, evaluateZoomReflow, generateHtmlReport, generateOverflowRemediation, generateRaycastSamplePoints, getContrastRatio, getDevicePreset, getInPageAuditFunctionString, getRelativeLuminance, parseColor };
+export { AccessibleNameIssue, BoundingBox, ColorContrastIssue, ContainerInnerBox, ContainerOverflowIssue, DEVICE_PRESETS, DevicePreset, ElementCollisionIssue, ElementComputedStyles, type ElementSnapshot, FocusIndicatorIssue, type InPageAuditData, LayoutAuditOptions, LayoutAuditResult, LayoutInspector, LayoutShiftItem, LayoutShiftResult, OcclusionIssue, OverflowIssue, type PointSample, type RawTextFlowAnomaly, ReadabilityIssue, ScrollTrapIssue, TextFlowAnomalyType, TextFlowIssue, type ThumbZone, ThumbZoneAnalysis, TouchTargetIssue, UXGrade, UXScore, ViewportFitResult, ViewportInfo, ZoomReflowResult, calculateContainerOverflow, calculateGrade, calculateOverflow, categorizeThumbZone, collectInPageAuditScript, computeAABBOverlapArea, computeElementDisplacement, computeUXScore, evaluateAccessibleName, evaluateColorContrast, evaluateContainerOverflow, evaluateElementCollisions, evaluateElementOcclusion, evaluateFocusIndicator, evaluateLayoutShift, evaluateScrollTrap, evaluateTextFlow, evaluateTextReadability, evaluateThumbZoneErgonomics, evaluateTouchTarget, evaluateViewportFit, evaluateZoomReflow, generateContainerOverflowRemediation, generateHtmlReport, generateOverflowRemediation, generateRaycastSamplePoints, generateTextFlowRemediation, getContrastRatio, getDevicePreset, getInPageAuditFunctionString, getRelativeLuminance, isExemptFromContainerOverflow, parseColor };

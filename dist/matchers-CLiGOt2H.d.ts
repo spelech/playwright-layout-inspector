@@ -36,6 +36,23 @@ interface ElementComputedStyles {
     boxSizing: string;
     margin: string;
     padding: string;
+    paddingTop?: string;
+    paddingRight?: string;
+    paddingBottom?: string;
+    paddingLeft?: string;
+    borderTopWidth?: string;
+    borderRightWidth?: string;
+    borderBottomWidth?: string;
+    borderLeftWidth?: string;
+    wordBreak?: string;
+    overflowWrap?: string;
+    whiteSpace?: string;
+    textWrap?: string;
+    flexDirection?: string;
+    flexWrap?: string;
+    flexShrink?: string;
+    flexGrow?: string;
+    flexBasis?: string;
     fontSize?: string;
     lineHeight?: string;
     zIndex?: string;
@@ -59,6 +76,54 @@ interface OverflowIssue {
     culpritDescription: string;
     suggestedFix: string;
     severity: 'critical' | 'warning';
+}
+interface ContainerInnerBox {
+    top: number;
+    right: number;
+    bottom: number;
+    left: number;
+    width: number;
+    height: number;
+}
+interface ContainerOverflowIssue {
+    selector: string;
+    tagName: string;
+    id?: string;
+    className?: string;
+    boundingBox: BoundingBox;
+    containerSelector: string;
+    containerTagName: string;
+    containerBoundingBox: BoundingBox;
+    containerInnerBox: ContainerInnerBox;
+    overflowRightPx: number;
+    overflowBottomPx: number;
+    overflowLeftPx: number;
+    overflowTopPx: number;
+    computedStyles: ElementComputedStyles;
+    culpritDescription: string;
+    suggestedFix: string;
+    severity: 'critical' | 'warning';
+}
+type TextFlowAnomalyType = 'mid-word-break' | 'orphan-wrap' | 'broken-multiline-button' | 'crushed-flex-column';
+interface TextFlowIssue {
+    selector: string;
+    tagName: string;
+    textSnippet: string;
+    anomalyType: TextFlowAnomalyType;
+    details: string;
+    lineCount?: number;
+    lastLineWordCount?: number;
+    orphanText?: string;
+    computedStyles?: {
+        wordBreak?: string;
+        overflowWrap?: string;
+        whiteSpace?: string;
+        textWrap?: string;
+        display?: string;
+        flex?: string;
+    };
+    severity: 'critical' | 'warning';
+    suggestedFix: string;
 }
 interface LayoutShiftItem {
     selector: string;
@@ -256,6 +321,8 @@ interface LayoutAuditOptions {
     checkTouchTargets?: boolean;
     minTouchTargetSize?: number;
     checkOverflow?: boolean;
+    checkContainerOverflow?: boolean;
+    checkTextFlow?: boolean;
     checkViewportFit?: boolean;
     checkReadability?: boolean;
     minFontSizePx?: number;
@@ -283,6 +350,8 @@ interface LayoutAuditResult {
     viewport: ViewportInfo;
     uxScore: UXScore;
     overflowIssues: OverflowIssue[];
+    containerOverflowIssues: ContainerOverflowIssue[];
+    textFlowIssues: TextFlowIssue[];
     layoutShiftResult?: LayoutShiftResult;
     touchTargetIssues: TouchTargetIssue[];
     viewportFit: ViewportFitResult;
@@ -302,9 +371,25 @@ interface LayoutAuditResult {
 
 declare const customMatchers: {
     /**
-     * Asserts that no element on the page overflows or bleeds past the viewport boundaries.
+     * Asserts that no element on the page overflows or bleeds past viewport or parent container boundaries.
      */
     toHaveNoLayoutOverflow(page: Page, options?: LayoutAuditOptions): Promise<{
+        pass: boolean;
+        message: () => string;
+        name: string;
+    }>;
+    /**
+     * Asserts that no child element bleeds beyond its parent visual container's inner content/padding boundary.
+     */
+    toHaveNoContainerOverflow(page: Page, options?: LayoutAuditOptions): Promise<{
+        pass: boolean;
+        message: () => string;
+        name: string;
+    }>;
+    /**
+     * Asserts that text flows cleanly without awkward mid-word breaks, ragged orphan wraps on buttons/headings, or crushed flex columns.
+     */
+    toHaveCleanTextFlow(page: Page, options?: LayoutAuditOptions): Promise<{
         pass: boolean;
         message: () => string;
         name: string;
@@ -393,6 +478,8 @@ declare global {
     namespace PlaywrightTest {
         interface Matchers<R, T> {
             toHaveNoLayoutOverflow(options?: LayoutAuditOptions): Promise<R>;
+            toHaveNoContainerOverflow(options?: LayoutAuditOptions): Promise<R>;
+            toHaveCleanTextFlow(options?: LayoutAuditOptions): Promise<R>;
             toHaveMobileFit(options?: LayoutAuditOptions): Promise<R>;
             toHaveTouchFriendlyTargets(options?: {
                 minSize?: number;
@@ -413,4 +500,4 @@ declare global {
     }
 }
 
-export { type AccessibleNameIssue as A, type BoundingBox as B, type ColorContrastIssue as C, type DevicePreset as D, type ElementComputedStyles as E, type FocusIndicatorIssue as F, type LayoutShiftItem as L, type OcclusionIssue as O, type ReadabilityIssue as R, type ScrollTrapIssue as S, type TouchTargetIssue as T, type UXGrade as U, type ViewportInfo as V, type ZoomReflowResult as Z, type LayoutShiftResult as a, type ViewportFitResult as b, type ElementCollisionIssue as c, type ThumbZoneAnalysis as d, type OverflowIssue as e, type UXScore as f, type LayoutAuditResult as g, type LayoutAuditOptions as h, type UXCategoryScore as i, customMatchers as j };
+export { type AccessibleNameIssue as A, type BoundingBox as B, type ContainerInnerBox as C, type DevicePreset as D, type ElementComputedStyles as E, type FocusIndicatorIssue as F, type LayoutShiftItem as L, type OcclusionIssue as O, type ReadabilityIssue as R, type ScrollTrapIssue as S, type TextFlowAnomalyType as T, type UXGrade as U, type ViewportInfo as V, type ZoomReflowResult as Z, type ContainerOverflowIssue as a, type TextFlowIssue as b, type LayoutShiftResult as c, type ViewportFitResult as d, type TouchTargetIssue as e, type ElementCollisionIssue as f, type ColorContrastIssue as g, type ThumbZoneAnalysis as h, type OverflowIssue as i, type UXScore as j, type LayoutAuditResult as k, type LayoutAuditOptions as l, type UXCategoryScore as m, customMatchers as n };

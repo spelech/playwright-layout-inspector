@@ -36,6 +36,23 @@ export interface ElementComputedStyles {
   boxSizing: string;
   margin: string;
   padding: string;
+  paddingTop?: string;
+  paddingRight?: string;
+  paddingBottom?: string;
+  paddingLeft?: string;
+  borderTopWidth?: string;
+  borderRightWidth?: string;
+  borderBottomWidth?: string;
+  borderLeftWidth?: string;
+  wordBreak?: string;
+  overflowWrap?: string;
+  whiteSpace?: string;
+  textWrap?: string;
+  flexDirection?: string;
+  flexWrap?: string;
+  flexShrink?: string;
+  flexGrow?: string;
+  flexBasis?: string;
   fontSize?: string;
   lineHeight?: string;
   zIndex?: string;
@@ -60,6 +77,62 @@ export interface OverflowIssue {
   culpritDescription: string;
   suggestedFix: string;
   severity: 'critical' | 'warning';
+}
+
+export interface ContainerInnerBox {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+  width: number;
+  height: number;
+}
+
+export interface ContainerOverflowIssue {
+  selector: string;
+  tagName: string;
+  id?: string;
+  className?: string;
+  boundingBox: BoundingBox;
+  containerSelector: string;
+  containerTagName: string;
+  containerBoundingBox: BoundingBox;
+  containerInnerBox: ContainerInnerBox;
+  overflowRightPx: number;
+  overflowBottomPx: number;
+  overflowLeftPx: number;
+  overflowTopPx: number;
+  computedStyles: ElementComputedStyles;
+  culpritDescription: string;
+  suggestedFix: string;
+  severity: 'critical' | 'warning';
+}
+
+export type TextFlowAnomalyType =
+  | 'mid-word-break'
+  | 'orphan-wrap'
+  | 'broken-multiline-button'
+  | 'crushed-flex-column';
+
+export interface TextFlowIssue {
+  selector: string;
+  tagName: string;
+  textSnippet: string;
+  anomalyType: TextFlowAnomalyType;
+  details: string;
+  lineCount?: number;
+  lastLineWordCount?: number;
+  orphanText?: string;
+  computedStyles?: {
+    wordBreak?: string;
+    overflowWrap?: string;
+    whiteSpace?: string;
+    textWrap?: string;
+    display?: string;
+    flex?: string;
+  };
+  severity: 'critical' | 'warning';
+  suggestedFix: string;
 }
 
 export interface LayoutShiftItem {
@@ -275,6 +348,8 @@ export interface LayoutAuditOptions {
   checkTouchTargets?: boolean;
   minTouchTargetSize?: number; // default 24 for AA, 44 for AAA
   checkOverflow?: boolean;
+  checkContainerOverflow?: boolean;
+  checkTextFlow?: boolean;
   checkViewportFit?: boolean;
   checkReadability?: boolean;
   minFontSizePx?: number; // default 12
@@ -299,6 +374,8 @@ export interface LayoutAuditResult {
   viewport: ViewportInfo;
   uxScore: UXScore;
   overflowIssues: OverflowIssue[];
+  containerOverflowIssues: ContainerOverflowIssue[];
+  textFlowIssues: TextFlowIssue[];
   layoutShiftResult?: LayoutShiftResult;
   touchTargetIssues: TouchTargetIssue[];
   viewportFit: ViewportFitResult;

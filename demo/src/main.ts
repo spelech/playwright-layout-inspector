@@ -116,6 +116,74 @@ function renderApp(scenario: string) {
         </div>
       </div>
     `;
+  } else if (scenario === 'container-overflow') {
+    content = `
+      <div id="test-container" style="padding: 32px; display: flex; justify-content: center; align-items: center; min-height: 80vh;">
+        <!-- Modal Card Container: 550px width -->
+        <div id="auth-modal" class="modal-card" style="position: relative; width: 550px; background: #0f172a; border: 2px solid #334155; border-radius: 12px; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);">
+          <!-- Exempt Corner Close Button -->
+          <button id="modal-close-btn" class="btn-close" aria-label="Close" style="position: absolute; top: -10px; right: -10px; width: 28px; height: 28px; background: #ef4444; color: white; border: none; border-radius: 50%; cursor: pointer;">✕</button>
+
+          <!-- Exempt Floating Tooltip -->
+          <div id="auth-tooltip" role="tooltip" class="tooltip" style="position: absolute; top: -35px; left: 24px; background: #1e293b; color: #cbd5e1; padding: 4px 8px; border-radius: 4px; font-size: 11px;">
+            Security Check
+          </div>
+
+          <h2 style="font-size: 20px; font-weight: bold; color: white; margin-bottom: 16px;">Two-Factor Authentication</h2>
+          <p style="font-size: 14px; color: #94a3b8; margin-bottom: 20px;">Enter verification codes across 3 auth services.</p>
+
+          <!-- Overflowing 3-column auth inputs row: total width 632px inside 550px modal (inner content ~502px) -->
+          <div id="auth-input-row" class="auth-row" style="display: flex; gap: 16px; width: 632px; margin-bottom: 20px;">
+            <input id="auth-code-1" type="text" placeholder="SMS Code (200px)" style="width: 200px; height: 44px; background: #1e293b; border: 1px solid #475569; color: white; border-radius: 6px; padding: 0 12px; box-sizing: border-box;" />
+            <input id="auth-code-2" type="text" placeholder="Email Code (200px)" style="width: 200px; height: 44px; background: #1e293b; border: 1px solid #475569; color: white; border-radius: 6px; padding: 0 12px; box-sizing: border-box;" />
+            <input id="auth-code-3" type="text" placeholder="App Token (200px)" style="width: 200px; height: 44px; background: #1e293b; border: 1px solid #475569; color: white; border-radius: 6px; padding: 0 12px; box-sizing: border-box;" />
+          </div>
+
+          <button id="auth-submit-btn" style="width: 100%; height: 44px; background: #4f46e5; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+            Verify Credentials
+          </button>
+        </div>
+      </div>
+    `;
+  } else if (scenario === 'text-breaks') {
+    content = `
+      <div id="test-container" style="padding: 24px; max-width: 600px; margin: 0 auto;">
+        <h1 style="font-size: 20px; font-weight: bold; margin-bottom: 16px;">Scenario: Text Flow & Wrap Anomalies</h1>
+
+        <!-- 1. Mid-word break anomaly -->
+        <div style="background: #0f172a; padding: 16px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 16px;">
+          <h3 style="font-size: 14px; color: #93c5fd; margin-bottom: 8px;">1. Mid-Word Break (word-break: break-all)</h3>
+          <p id="midword-break-text" style="width: 120px; word-break: break-all; font-size: 14px; color: #e2e8f0; line-height: 1.4;">
+            Authentication credentials required
+          </p>
+        </div>
+
+        <!-- 2. Awkward Button Wrap -->
+        <div style="background: #0f172a; padding: 16px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 16px;">
+          <h3 style="font-size: 14px; color: #93c5fd; margin-bottom: 8px;">2. Button Orphan / Multi-line Wrap</h3>
+          <button id="orphan-button" class="btn" style="width: 65px; height: 50px; background: #2563eb; color: white; border: none; border-radius: 6px; font-size: 13px; padding: 4px;">
+            Submit Order
+          </button>
+        </div>
+
+        <!-- 3. Heading Orphan Wrap -->
+        <div style="background: #0f172a; padding: 16px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 16px;">
+          <h3 style="font-size: 14px; color: #93c5fd; margin-bottom: 8px;">3. Heading Orphan Wrap</h3>
+          <h2 id="orphan-heading" style="width: 100px; font-size: 16px; font-weight: bold; color: white; line-height: 1.3;">
+            Submit order now
+          </h2>
+        </div>
+
+        <!-- 4. Crushed Flex Column -->
+        <div style="background: #0f172a; padding: 16px; border-radius: 8px; border: 1px solid #334155; margin-bottom: 16px;">
+          <h3 style="font-size: 14px; color: #93c5fd; margin-bottom: 8px;">4. Crushed Flex Column</h3>
+          <div id="flex-row-container" style="display: flex; gap: 8px; width: 300px; border: 1px dashed #64748b; padding: 8px;">
+            <div style="width: 250px; background: #334155; color: white; padding: 6px; font-size: 12px;">Wide Column (250px)</div>
+            <div id="crushed-col" style="width: 40px; overflow: hidden; white-space: nowrap; background: #ef4444; color: white; padding: 6px; font-size: 12px;">OverflownTextString</div>
+          </div>
+        </div>
+      </div>
+    `;
   } else if (scenario === 'bad-viewport') {
     const meta = document.getElementById('meta-viewport');
     if (meta) meta.setAttribute('content', 'width=device-width, user-scalable=no, maximum-scale=1.0');
@@ -136,7 +204,7 @@ function renderApp(scenario: string) {
       </style>
       <div id="test-container" style="padding: 16px; max-width: 100%; box-sizing: border-box;">
         <header style="height: 56px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #1e293b; padding-bottom: 12px; margin-bottom: 16px;">
-          <h1 style="font-size: 18px; font-weight: bold; color: #818cf8;">Compliant Responsive Layout</h1>
+          <h1 style="font-size: 16px; font-weight: bold; color: #818cf8; white-space: nowrap;">Compliant Layout</h1>
           <div style="display: flex; gap: 8px; align-items: center;">
             <button id="undo-btn" aria-label="Undo" title="Undo last action" style="min-width: 44px; min-height: 44px; background: #334155; color: white; border: none; border-radius: 8px; font-size: 14px; padding: 0 12px; cursor: pointer;">↩</button>
             <button id="redo-btn" aria-label="Redo" title="Redo last action" style="min-width: 44px; min-height: 44px; background: #334155; color: white; border: none; border-radius: 8px; font-size: 14px; padding: 0 12px; cursor: pointer;">↪</button>
@@ -160,8 +228,10 @@ function renderApp(scenario: string) {
 
   // Navigation switcher
   const nav = `
-    <div id="scenario-nav" style="position: fixed; bottom: 0; left: 0; right: 0; background: #0f172a; border-top: 1px solid #1e293b; height: 50px; display: flex; align-items: center; justify-content: space-around; z-index: 100;">
+    <div id="scenario-nav" style="position: fixed; bottom: 0; left: 0; right: 0; background: #0f172a; border-top: 1px solid #1e293b; height: 50px; display: flex; align-items: center; justify-content: space-around; z-index: 100; overflow-x: auto;">
       <a href="?scenario=clean" style="color: ${scenario === 'clean' ? '#818cf8' : '#94a3b8'}; font-size: 11px; text-decoration: none; min-width: 40px; min-height: 44px; display: flex; align-items: center; justify-content: center;">Clean</a>
+      <a href="?scenario=container-overflow" style="color: ${scenario === 'container-overflow' ? '#818cf8' : '#94a3b8'}; font-size: 11px; text-decoration: none; min-width: 40px; min-height: 44px; display: flex; align-items: center; justify-content: center;">Modal Bleed</a>
+      <a href="?scenario=text-breaks" style="color: ${scenario === 'text-breaks' ? '#818cf8' : '#94a3b8'}; font-size: 11px; text-decoration: none; min-width: 40px; min-height: 44px; display: flex; align-items: center; justify-content: center;">Text Breaks</a>
       <a href="?scenario=overflow" style="color: ${scenario === 'overflow' ? '#818cf8' : '#94a3b8'}; font-size: 11px; text-decoration: none; min-width: 40px; min-height: 44px; display: flex; align-items: center; justify-content: center;">Overflow</a>
       <a href="?scenario=shifting" style="color: ${scenario === 'shifting' ? '#818cf8' : '#94a3b8'}; font-size: 11px; text-decoration: none; min-width: 40px; min-height: 44px; display: flex; align-items: center; justify-content: center;">Shifting</a>
       <a href="?scenario=tiny-touch" style="color: ${scenario === 'tiny-touch' ? '#818cf8' : '#94a3b8'}; font-size: 11px; text-decoration: none; min-width: 40px; min-height: 44px; display: flex; align-items: center; justify-content: center;">Touch</a>

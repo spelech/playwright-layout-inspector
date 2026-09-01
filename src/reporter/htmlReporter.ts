@@ -7,10 +7,12 @@ export function generateHtmlReport(result: LayoutAuditResult): string {
     device,
     viewport,
     uxScore,
-    overflowIssues,
-    touchTargetIssues,
+    overflowIssues = [],
+    containerOverflowIssues = [],
+    textFlowIssues = [],
+    touchTargetIssues = [],
     viewportFit,
-    readabilityIssues,
+    readabilityIssues = [],
     occlusionIssues = [],
     collisionIssues = [],
     scrollTrapIssues = [],
@@ -24,6 +26,8 @@ export function generateHtmlReport(result: LayoutAuditResult): string {
 
   const totalIssues =
     overflowIssues.length +
+    containerOverflowIssues.length +
+    textFlowIssues.length +
     touchTargetIssues.length +
     readabilityIssues.length +
     occlusionIssues.length +
@@ -31,7 +35,7 @@ export function generateHtmlReport(result: LayoutAuditResult): string {
     scrollTrapIssues.length +
     accessibleNameIssues.length +
     focusIndicatorIssues.length +
-    viewportFit.issues.length;
+    (viewportFit ? viewportFit.issues.length : 0);
 
   const scoreColor = uxScore.totalScore >= 85 ? '#10b981' : uxScore.totalScore >= 70 ? '#f59e0b' : '#ef4444';
   const gradeBadgeClass = uxScore.grade.startsWith('A')
@@ -170,7 +174,7 @@ export function generateHtmlReport(result: LayoutAuditResult): string {
           <h2 class="text-xl font-bold text-white flex items-center gap-2">
             <span>🛠️</span> Issues & Remediation (${totalIssues})
           </h2>
-          <p class="text-xs text-slate-400">Actionable layout, overflow, collision, and accessibility fixes</p>
+          <p class="text-xs text-slate-400">Actionable layout, container overflow, text wrap, collision, and accessibility fixes</p>
         </div>
       </div>
 
@@ -178,21 +182,21 @@ export function generateHtmlReport(result: LayoutAuditResult): string {
         <div class="py-12 text-center text-slate-400 space-y-2">
           <div class="text-4xl">🎉</div>
           <p class="text-base font-semibold text-slate-200">No layout or UX issues detected!</p>
-          <p class="text-xs">Your layout complies with responsive viewport fit, touch target standards, accessibility, and stability rules.</p>
+          <p class="text-xs">Your layout complies with responsive viewport fit, container containment, text flow, touch target standards, accessibility, and stability rules.</p>
         </div>
       ` : `
         <div class="space-y-4">
           <!-- Viewport Fit Issues -->
-          ${viewportFit.issues.map(iss => `
+          ${viewportFit ? viewportFit.issues.map(iss => `
             <div class="p-4 bg-rose-950/30 border border-rose-500/30 rounded-xl space-y-2">
               <div class="flex items-center gap-2 text-rose-400 font-semibold text-sm">
                 <span>🚨 Viewport Constraint Issue</span>
               </div>
               <p class="text-sm text-slate-200">${escapeHtml(iss)}</p>
             </div>
-          `).join('')}
+          `).join('') : ''}
 
-          <!-- Overflow Issues -->
+          <!-- Viewport Overflow Issues -->
           ${overflowIssues.map(issue => `
             <div class="p-4 bg-slate-950/80 border border-red-500/30 rounded-xl space-y-3">
               <div class="flex items-start justify-between gap-4">
@@ -211,6 +215,59 @@ export function generateHtmlReport(result: LayoutAuditResult): string {
               <p class="text-xs text-slate-300">${escapeHtml(issue.culpritDescription)}</p>
               <div class="text-xs text-emerald-300 bg-emerald-950/30 p-2.5 rounded-lg border border-emerald-500/20 font-mono">
                 💡 <span class="font-bold text-emerald-400">Fix:</span> ${escapeHtml(issue.suggestedFix)}
+              </div>
+            </div>
+          `).join('')}
+
+          <!-- Container Overflow Issues -->
+          ${containerOverflowIssues.map(cIssue => `
+            <div class="p-4 bg-slate-950/80 border border-orange-500/30 rounded-xl space-y-3">
+              <div class="flex items-start justify-between gap-4">
+                <div class="space-y-1">
+                  <div class="flex items-center gap-2">
+                    <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-orange-500/20 text-orange-400 border border-orange-500/30">
+                      ${cIssue.severity}
+                    </span>
+                    <span class="text-sm font-semibold text-slate-100">Container Geometric Bleed (+${Math.round(cIssue.overflowRightPx || cIssue.overflowBottomPx || cIssue.overflowLeftPx)}px)</span>
+                  </div>
+                  <div class="flex flex-wrap items-center gap-2 text-xs font-mono">
+                    <span class="text-rose-400 bg-rose-950/40 px-2 py-0.5 rounded border border-rose-500/20">
+                      Child: ${escapeHtml(cIssue.selector)}
+                    </span>
+                    <span class="text-slate-500">inside</span>
+                    <span class="text-indigo-400 bg-indigo-950/40 px-2 py-0.5 rounded border border-indigo-500/20">
+                      Container: ${escapeHtml(cIssue.containerSelector)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <p class="text-xs text-slate-300">${escapeHtml(cIssue.culpritDescription)}</p>
+              <div class="text-xs text-emerald-300 bg-emerald-950/30 p-2.5 rounded-lg border border-emerald-500/20 font-mono">
+                💡 <span class="font-bold text-emerald-400">Fix:</span> ${escapeHtml(cIssue.suggestedFix)}
+              </div>
+            </div>
+          `).join('')}
+
+          <!-- Text Flow & Wrap Anomaly Issues -->
+          ${textFlowIssues.map(tf => `
+            <div class="p-4 bg-slate-950/80 border border-yellow-500/30 rounded-xl space-y-3">
+              <div class="flex items-start justify-between gap-4">
+                <div class="space-y-1">
+                  <div class="flex items-center gap-2">
+                    <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+                      ${tf.anomalyType.replace(/-/g, ' ')}
+                    </span>
+                    <span class="text-sm font-semibold text-slate-100">Text Flow / Wrapping Anomaly</span>
+                  </div>
+                  <div class="text-xs font-mono text-indigo-400 bg-indigo-950/40 px-2 py-1 rounded border border-indigo-500/20 inline-block">
+                    ${escapeHtml(tf.selector)}
+                  </div>
+                  ${tf.textSnippet ? `<span class="text-xs text-slate-400 italic font-mono ml-2">&ldquo;${escapeHtml(tf.textSnippet)}&rdquo;</span>` : ''}
+                </div>
+              </div>
+              <p class="text-xs text-slate-300">${escapeHtml(tf.details)}</p>
+              <div class="text-xs text-emerald-300 bg-emerald-950/30 p-2.5 rounded-lg border border-emerald-500/20 font-mono">
+                💡 <span class="font-bold text-emerald-400">Fix:</span> ${escapeHtml(tf.suggestedFix)}
               </div>
             </div>
           `).join('')}

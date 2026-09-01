@@ -41,6 +41,23 @@ export interface InPageAuditData {
       boxSizing: string;
       margin: string;
       padding: string;
+      paddingTop?: string;
+      paddingRight?: string;
+      paddingBottom?: string;
+      paddingLeft?: string;
+      borderTopWidth?: string;
+      borderRightWidth?: string;
+      borderBottomWidth?: string;
+      borderLeftWidth?: string;
+      wordBreak?: string;
+      overflowWrap?: string;
+      whiteSpace?: string;
+      textWrap?: string;
+      flexDirection?: string;
+      flexWrap?: string;
+      flexShrink?: string;
+      flexGrow?: string;
+      flexBasis?: string;
       fontSize: string;
       lineHeight: string;
       fontWeight?: string;
@@ -66,6 +83,71 @@ export interface InPageAuditData {
     ariaLabel?: string | null;
     ariaLabelledBy?: string | null;
     title?: string | null;
+  }>;
+  containerOverflows: Array<{
+    childSelector: string;
+    childTagName: string;
+    childId: string;
+    childClassName: string;
+    childRect: {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+      top: number;
+      right: number;
+      bottom: number;
+      left: number;
+    };
+    childStyles: any;
+    childRole?: string | null;
+    containerSelector: string;
+    containerTagName: string;
+    containerRect: {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+      top: number;
+      right: number;
+      bottom: number;
+      left: number;
+    };
+    containerInnerBox: {
+      top: number;
+      right: number;
+      bottom: number;
+      left: number;
+      width: number;
+      height: number;
+    };
+    containerStyles: any;
+    overflowRightPx: number;
+    overflowBottomPx: number;
+    overflowLeftPx: number;
+    overflowTopPx: number;
+    isExempt: boolean;
+  }>;
+  textFlowAnomalies: Array<{
+    selector: string;
+    tagName: string;
+    textSnippet: string;
+    anomalyType: 'mid-word-break' | 'orphan-wrap' | 'broken-multiline-button' | 'crushed-flex-column';
+    word?: string;
+    orphanText?: string;
+    lineCount?: number;
+    lastLineWordCount?: number;
+    elementWidth?: number;
+    scrollWidth?: number;
+    clientWidth?: number;
+    computedStyles?: {
+      wordBreak?: string;
+      overflowWrap?: string;
+      whiteSpace?: string;
+      textWrap?: string;
+      display?: string;
+      flex?: string;
+    };
   }>;
   occlusions: Array<{
     selector: string;
@@ -148,6 +230,129 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
 
   const allElements = Array.from(document.querySelectorAll('body *'));
   const collectedElements: InPageAuditData['elements'] = [];
+  const containerOverflows: InPageAuditData['containerOverflows'] = [];
+  const textFlowAnomalies: InPageAuditData['textFlowAnomalies'] = [];
+
+  function isVisualContainer(targetEl: Element, style: CSSStyleDeclaration): boolean {
+    const t = targetEl.tagName.toLowerCase();
+    if (t === 'body' || t === 'html') return false;
+
+    // 1. Semantic container tags
+    const semantic = ['dialog', 'fieldset', 'form', 'aside', 'section', 'article', 'main', 'nav', 'details', 'table'];
+    if (semantic.includes(t)) return true;
+
+    // 2. Container ARIA roles
+    const r = targetEl.getAttribute('role');
+    if (r && ['dialog', 'alertdialog', 'region', 'tabpanel', 'group', 'form'].includes(r)) return true;
+
+    // 3. Container class names
+    const c = (typeof targetEl.className === 'string' ? targetEl.className : '').toLowerCase();
+    if (/modal|card|panel|dialog|drawer|sheet|popup|box|container|wrapper|frame|window|tabpanel/.test(c)) {
+      return true;
+    }
+
+    // 4. Styled boundaries (explicit background, visible border, shadow, radius, or constrained layout)
+    const hasBg = !!(style.backgroundColor && style.backgroundColor !== 'rgba(0, 0, 0, 0)' && style.backgroundColor !== 'transparent');
+    const hasBorder = !!((parseFloat(style.borderTopWidth || '0') > 0 || parseFloat(style.borderWidth || '0') > 0) && style.borderStyle !== 'none');
+    const hasShadow = !!(style.boxShadow && style.boxShadow !== 'none');
+    const hasRadius = parseFloat(style.borderRadius || '0') > 0;
+    const hasOverflow = style.overflow !== 'visible' || style.overflowX !== 'visible' || style.overflowY !== 'visible';
+    const hasConstrainedWidth = !!((style.width && style.width.includes('px')) || (style.maxWidth && style.maxWidth !== 'none'));
+
+    return Boolean((hasBg || hasBorder || hasShadow || hasRadius || hasOverflow) && hasConstrainedWidth);
+  }
+
+  function getClosestVisualContainer(el: Element): {
+    element: Element;
+    selector: string;
+    tagName: string;
+    rect: DOMRect;
+    innerBox: { top: number; right: number; bottom: number; left: number; width: number; height: number };
+    comp: CSSStyleDeclaration;
+  } | null {
+    let curr = el.parentElement;
+    while (curr && curr.tagName.toLowerCase() !== 'html' && curr.tagName.toLowerCase() !== 'body') {
+      const comp = window.getComputedStyle(curr);
+      if (isVisualContainer(curr, comp)) {
+        const cRect = curr.getBoundingClientRect();
+        const pt = parseFloat(comp.paddingTop) || 0;
+        const pr = parseFloat(comp.paddingRight) || 0;
+        const pb = parseFloat(comp.paddingBottom) || 0;
+        const pl = parseFloat(comp.paddingLeft) || 0;
+        const bt = parseFloat(comp.borderTopWidth) || 0;
+        const br = parseFloat(comp.borderRightWidth) || 0;
+        const bb = parseFloat(comp.borderBottomWidth) || 0;
+        const bl = parseFloat(comp.borderLeftWidth) || 0;
+
+        const innerTop = cRect.top + bt + pt;
+        const innerRight = cRect.right - br - pr;
+        const innerBottom = cRect.bottom - bb - pb;
+        const innerLeft = cRect.left + bl + pl;
+
+        return {
+          element: curr,
+          selector: getCssSelector(curr),
+          tagName: curr.tagName.toLowerCase(),
+          rect: cRect,
+          innerBox: {
+            top: Math.round(innerTop * 100) / 100,
+            right: Math.round(innerRight * 100) / 100,
+            bottom: Math.round(innerBottom * 100) / 100,
+            left: Math.round(innerLeft * 100) / 100,
+            width: Math.round(Math.max(0, innerRight - innerLeft) * 100) / 100,
+            height: Math.round(Math.max(0, innerBottom - innerTop) * 100) / 100
+          },
+          comp
+        };
+      }
+      curr = curr.parentElement;
+    }
+    return null;
+  }
+
+  function checkExemption(el: Element, comp: CSSStyleDeclaration, containerComp: CSSStyleDeclaration): boolean {
+    if (comp.position === 'fixed') return true;
+
+    // Popover / Tooltip / Dropdown check
+    if (el.hasAttribute('popover') || (el as any).popover) return true;
+    const role = el.getAttribute('role') || '';
+    if (['tooltip', 'menu', 'listbox', 'dialog', 'alertdialog'].includes(role)) return true;
+
+    const cls = (typeof el.className === 'string' ? el.className : '').toLowerCase();
+    if (/tooltip|popover|dropdown|menu|toast|floating|popper|modal-backdrop|select-options|tippy-box/.test(cls)) {
+      return true;
+    }
+
+    // Corner controls (e.g. .btn-close, .close-btn, [aria-label="Close"])
+    const ariaLabel = (el.getAttribute('aria-label') || '').toLowerCase();
+    if (
+      /close|btn-close|dismiss|badge|indicator|pill|tag/.test(cls) ||
+      ariaLabel.includes('close') ||
+      ariaLabel.includes('dismiss')
+    ) {
+      if (comp.position === 'absolute') {
+        return true;
+      }
+    }
+
+    // Container scrollable in both dimensions
+    if (
+      (containerComp.overflowX === 'auto' || containerComp.overflowX === 'scroll') &&
+      (containerComp.overflowY === 'auto' || containerComp.overflowY === 'scroll')
+    ) {
+      return true;
+    }
+
+    // Decorative / sr-only / aria-hidden
+    if (el.getAttribute('aria-hidden') === 'true' && comp.pointerEvents === 'none') {
+      return true;
+    }
+
+    return false;
+  }
+
+  // Set of already reported overflowing container parent elements to prevent cascading duplicates
+  const reportedOverflowParentSelectors = new Set<string>();
 
   for (const el of allElements) {
     const tag = el.tagName.toLowerCase();
@@ -171,7 +376,7 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
     }
 
     const role = el.getAttribute('role');
-    const isButton = tag === 'button' || role === 'button' || role === 'tab' || role === 'menuitem';
+    const isButton = tag === 'button' || role === 'button' || role === 'tab' || role === 'menuitem' || (typeof el.className === 'string' && el.className.includes('btn'));
     const isLink = tag === 'a' && el.hasAttribute('href');
     const isInput = ['input', 'select', 'textarea'].includes(tag);
     const hasCursorPointer = comp.cursor === 'pointer';
@@ -258,6 +463,51 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
     }
     const effectiveBg = `rgb(${compBg.r}, ${compBg.g}, ${compBg.b})`;
 
+    const computedStylesObj = {
+      overflow: comp.overflow,
+      overflowX: comp.overflowX,
+      overflowY: comp.overflowY,
+      width: comp.width,
+      minWidth: comp.minWidth,
+      maxWidth: comp.maxWidth,
+      height: comp.height,
+      minHeight: comp.minHeight,
+      maxHeight: comp.maxHeight,
+      transform: comp.transform,
+      display: comp.display,
+      position: comp.position,
+      boxSizing: comp.boxSizing,
+      margin: comp.margin,
+      padding: comp.padding,
+      paddingTop: comp.paddingTop,
+      paddingRight: comp.paddingRight,
+      paddingBottom: comp.paddingBottom,
+      paddingLeft: comp.paddingLeft,
+      borderTopWidth: comp.borderTopWidth,
+      borderRightWidth: comp.borderRightWidth,
+      borderBottomWidth: comp.borderBottomWidth,
+      borderLeftWidth: comp.borderLeftWidth,
+      wordBreak: comp.wordBreak,
+      overflowWrap: comp.overflowWrap,
+      whiteSpace: comp.whiteSpace,
+      textWrap: (comp as any).textWrap || comp.whiteSpace,
+      flexDirection: comp.flexDirection,
+      flexWrap: comp.flexWrap,
+      flexShrink: comp.flexShrink,
+      flexGrow: comp.flexGrow,
+      flexBasis: comp.flexBasis,
+      fontSize: comp.fontSize,
+      lineHeight: comp.lineHeight,
+      fontWeight: comp.fontWeight,
+      color: comp.color,
+      backgroundColor: effectiveBg,
+      zIndex: comp.zIndex,
+      outlineWidth: comp.outlineWidth,
+      outlineStyle: comp.outlineStyle,
+      outlineColor: comp.outlineColor,
+      boxShadow: comp.boxShadow
+    };
+
     collectedElements.push({
       selector,
       tagName: tag,
@@ -276,33 +526,7 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
         bottom: Math.round(rect.bottom * 100) / 100,
         left: Math.round(rect.left * 100) / 100
       },
-      computedStyles: {
-        overflow: comp.overflow,
-        overflowX: comp.overflowX,
-        overflowY: comp.overflowY,
-        width: comp.width,
-        minWidth: comp.minWidth,
-        maxWidth: comp.maxWidth,
-        height: comp.height,
-        minHeight: comp.minHeight,
-        maxHeight: comp.maxHeight,
-        transform: comp.transform,
-        display: comp.display,
-        position: comp.position,
-        boxSizing: comp.boxSizing,
-        margin: comp.margin,
-        padding: comp.padding,
-        fontSize: comp.fontSize,
-        lineHeight: comp.lineHeight,
-        fontWeight: comp.fontWeight,
-        color: comp.color,
-        backgroundColor: effectiveBg,
-        zIndex: comp.zIndex,
-        outlineWidth: comp.outlineWidth,
-        outlineStyle: comp.outlineStyle,
-        outlineColor: comp.outlineColor,
-        boxShadow: comp.boxShadow
-      },
+      computedStyles: computedStylesObj,
       scrollWidth: el.scrollWidth,
       clientWidth: el.clientWidth,
       scrollHeight: el.scrollHeight,
@@ -316,6 +540,223 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
       ariaLabelledBy,
       title
     });
+
+    // --- Container Containment Geometric Inspection ---
+    const visualContainer = getClosestVisualContainer(el);
+    if (visualContainer && visualContainer.element !== el) {
+      const isExempt = checkExemption(el, comp, visualContainer.comp);
+      const inner = visualContainer.innerBox;
+
+      const overRight = Math.max(0, rect.right - inner.right);
+      const overLeft = Math.max(0, inner.left - rect.left);
+      const overBottom = Math.max(0, rect.bottom - inner.bottom);
+      const overTop = Math.max(0, inner.top - rect.top);
+
+      if ((overRight > 1.5 || overLeft > 1.5 || overBottom > 2) && !isExempt) {
+        // Avoid adding child elements if an ancestor already overflowed this container
+        const hasOverflowingAncestor = ancestors.some(anc => reportedOverflowParentSelectors.has(anc));
+        if (!hasOverflowingAncestor) {
+          reportedOverflowParentSelectors.add(selector);
+          containerOverflows.push({
+            childSelector: selector,
+            childTagName: tag,
+            childId: el.id || '',
+            childClassName: typeof el.className === 'string' ? el.className : '',
+            childRect: {
+              x: Math.round(rect.x * 100) / 100,
+              y: Math.round(rect.y * 100) / 100,
+              width: Math.round(rect.width * 100) / 100,
+              height: Math.round(rect.height * 100) / 100,
+              top: Math.round(rect.top * 100) / 100,
+              right: Math.round(rect.right * 100) / 100,
+              bottom: Math.round(rect.bottom * 100) / 100,
+              left: Math.round(rect.left * 100) / 100
+            },
+            childStyles: computedStylesObj,
+            childRole: role,
+            containerSelector: visualContainer.selector,
+            containerTagName: visualContainer.tagName,
+            containerRect: {
+              x: Math.round(visualContainer.rect.x * 100) / 100,
+              y: Math.round(visualContainer.rect.y * 100) / 100,
+              width: Math.round(visualContainer.rect.width * 100) / 100,
+              height: Math.round(visualContainer.rect.height * 100) / 100,
+              top: Math.round(visualContainer.rect.top * 100) / 100,
+              right: Math.round(visualContainer.rect.right * 100) / 100,
+              bottom: Math.round(visualContainer.rect.bottom * 100) / 100,
+              left: Math.round(visualContainer.rect.left * 100) / 100
+            },
+            containerInnerBox: inner,
+            containerStyles: {
+              overflowX: visualContainer.comp.overflowX,
+              overflowY: visualContainer.comp.overflowY
+            },
+            overflowRightPx: Math.round(overRight * 100) / 100,
+            overflowBottomPx: Math.round(overBottom * 100) / 100,
+            overflowLeftPx: Math.round(overLeft * 100) / 100,
+            overflowTopPx: Math.round(overTop * 100) / 100,
+            isExempt
+          });
+        }
+      }
+    }
+
+    // --- Text Flow & Wrap Anomaly Inspection ---
+    // 1. Mid-word break check:
+    if (!['pre', 'code', 'kbd', 'samp', 'textarea', 'input', 'style', 'script'].includes(tag)) {
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      let textNode: Node | null;
+      while ((textNode = walker.nextNode())) {
+        const val = textNode.nodeValue || '';
+        if (!val.trim()) continue;
+
+        const regex = /[a-zA-Z]{4,}/g;
+        let match: RegExpExecArray | null;
+        while ((match = regex.exec(val)) !== null) {
+          const word = match[0];
+          const startIndex = match.index;
+          const endIndex = startIndex + word.length;
+
+          try {
+            const range = document.createRange();
+            range.setStart(textNode, startIndex);
+            range.setEnd(textNode, endIndex);
+            const rects = range.getClientRects();
+            if (rects.length > 1) {
+              const firstTop = rects[0].top;
+              const lastTop = rects[rects.length - 1].top;
+              if (Math.abs(lastTop - firstTop) > 3) {
+                textFlowAnomalies.push({
+                  selector,
+                  tagName: tag,
+                  textSnippet,
+                  anomalyType: 'mid-word-break',
+                  word,
+                  computedStyles: {
+                    wordBreak: comp.wordBreak,
+                    overflowWrap: comp.overflowWrap
+                  }
+                });
+                break;
+              }
+            }
+          } catch {
+            // Ignore Range error
+          }
+        }
+      }
+    }
+
+    // 2. Multi-line button / Orphan wrap check:
+    const isHeadingTag = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tag);
+    const isLabelTag = tag === 'label' || (typeof el.className === 'string' && /badge|chip|pill|tag/.test(el.className));
+
+    if ((isButton || isHeadingTag || isLabelTag) && textContent && textContent.length >= 5) {
+      const words = textContent.split(/\s+/).filter(w => w.length > 0);
+      if (words.length >= 2) {
+        const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+        const measuredWords: Array<{ top: number; word: string }> = [];
+        let tNode: Node | null = null;
+        while ((tNode = walker.nextNode())) {
+          const val = tNode.nodeValue || '';
+          const nodeWords = val.trim().split(/\s+/).filter((w: string) => w.length > 0);
+          let searchPos = 0;
+
+          for (const w of nodeWords) {
+            const wordStart = val.indexOf(w, searchPos);
+            if (wordStart === -1) continue;
+            searchPos = wordStart + w.length;
+
+            try {
+              const r = document.createRange();
+              r.setStart(tNode, wordStart);
+              r.setEnd(tNode, wordStart + w.length);
+              const rRect = r.getBoundingClientRect();
+              if (rRect.width > 0 && rRect.height > 0) {
+                measuredWords.push({ top: rRect.top, word: w });
+              }
+            } catch {
+              // Ignore Range error
+            }
+          }
+        }
+
+        const lineGroups: Array<{ top: number; words: string[] }> = [];
+        for (const item of measuredWords) {
+          let placed = false;
+          for (const group of lineGroups) {
+            if (Math.abs(item.top - group.top) < 6) {
+              group.words.push(item.word);
+              placed = true;
+              break;
+            }
+          }
+          if (!placed) {
+            lineGroups.push({ top: item.top, words: [item.word] });
+          }
+        }
+
+        const lines = lineGroups.map(g => g.words);
+        if (lines.length > 1) {
+          const lastLine = lines[lines.length - 1];
+          const lastLineText = lastLine.join(' ');
+
+          if (isButton && textContent.length < 40) {
+            textFlowAnomalies.push({
+              selector,
+              tagName: tag,
+              textSnippet,
+              anomalyType: 'broken-multiline-button',
+              lineCount: lines.length,
+              orphanText: lastLineText,
+              lastLineWordCount: lastLine.length,
+              computedStyles: {
+                whiteSpace: comp.whiteSpace,
+                textWrap: (comp as any).textWrap
+              }
+            });
+          } else if ((isHeadingTag || isLabelTag) && lastLine.length === 1 && lines[0].length >= 2) {
+            textFlowAnomalies.push({
+              selector,
+              tagName: tag,
+              textSnippet,
+              anomalyType: 'orphan-wrap',
+              lineCount: lines.length,
+              orphanText: lastLineText,
+              lastLineWordCount: 1,
+              computedStyles: {
+                textWrap: (comp as any).textWrap || 'normal',
+                whiteSpace: comp.whiteSpace
+              }
+            });
+          }
+        }
+      }
+    }
+
+    // 3. Crushed Flex Column check:
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const parentComp = window.getComputedStyle(parentEl);
+      if (parentComp.display === 'flex' || parentComp.display === 'inline-flex') {
+        const isRow = !parentComp.flexDirection || parentComp.flexDirection.startsWith('row');
+        if (isRow && rect.width < 75 && el.scrollWidth > el.clientWidth + 3 && textContent.length > 8) {
+          textFlowAnomalies.push({
+            selector,
+            tagName: tag,
+            textSnippet,
+            anomalyType: 'crushed-flex-column',
+            elementWidth: rect.width,
+            scrollWidth: el.scrollWidth,
+            clientWidth: el.clientWidth,
+            computedStyles: {
+              display: comp.display,
+              flex: comp.flex
+            }
+          });
+        }
+      }
+    }
   }
 
   // Multi-point raycast occlusion sampling on interactive elements
@@ -372,6 +813,8 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
   return {
     viewport: vp,
     elements: collectedElements,
+    containerOverflows,
+    textFlowAnomalies,
     occlusions
   };
 }

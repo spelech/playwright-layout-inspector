@@ -3,6 +3,7 @@ import {
   AccessibleNameIssue,
   BoundingBox,
   ColorContrastIssue,
+  ContainerOverflowIssue,
   DevicePreset,
   ElementCollisionIssue,
   ElementComputedStyles,
@@ -14,6 +15,7 @@ import {
   OverflowIssue,
   ReadabilityIssue,
   ScrollTrapIssue,
+  TextFlowIssue,
   ThumbZoneAnalysis,
   TouchTargetIssue,
   ViewportFitResult,
@@ -21,6 +23,8 @@ import {
 } from '../types';
 import { getDevicePreset } from '../core/devices';
 import { calculateOverflow, generateOverflowRemediation } from '../core/overflow';
+import { evaluateContainerOverflow } from '../core/containerOverflow';
+import { evaluateTextFlow } from '../core/textFlow';
 import { computeElementDisplacement, evaluateLayoutShift, ElementSnapshot } from '../core/layoutShift';
 import { evaluateViewportFit } from '../core/viewportFit';
 import { evaluateTouchTarget } from '../core/touchTargets';
@@ -55,6 +59,8 @@ export class LayoutInspector {
     const mergedOptions: LayoutAuditOptions = {
       checkTouchTargets: true,
       checkOverflow: true,
+      checkContainerOverflow: true,
+      checkTextFlow: true,
       checkViewportFit: true,
       checkReadability: true,
       checkContrast: true,
@@ -85,7 +91,7 @@ export class LayoutInspector {
     // 1. Viewport Fit Evaluation
     const viewportFit: ViewportFitResult = evaluateViewportFit(viewport.metaViewport, viewport);
 
-    // 2. Overflow Issues Evaluation
+    // 2. Viewport Overflow Issues Evaluation
     const overflowIssues: OverflowIssue[] = [];
     if (mergedOptions.checkOverflow !== false) {
       for (const el of inPageData.elements) {
@@ -115,6 +121,35 @@ export class LayoutInspector {
             suggestedFix: remediation.suggestedFix,
             severity: over.overflowRightPx > 10 ? 'critical' : 'warning'
           });
+        }
+      }
+    }
+
+    // 2b. Container Overflow Issues Evaluation
+    const containerOverflowIssues: ContainerOverflowIssue[] = [];
+    if (mergedOptions.checkContainerOverflow !== false && inPageData.containerOverflows) {
+      for (const cov of inPageData.containerOverflows) {
+        if (cov.isExempt) continue;
+        const issue = evaluateContainerOverflow({
+          child: {
+            selector: cov.childSelector,
+            tagName: cov.childTagName,
+            id: cov.childId,
+            className: cov.childClassName,
+            rect: cov.childRect,
+            computedStyles: cov.childStyles,
+            role: cov.childRole
+          },
+          container: {
+            selector: cov.containerSelector,
+            tagName: cov.containerTagName,
+            rect: cov.containerRect,
+            innerBox: cov.containerInnerBox,
+            computedStyles: cov.containerStyles
+          }
+        });
+        if (issue) {
+          containerOverflowIssues.push(issue);
         }
       }
     }
@@ -172,7 +207,18 @@ export class LayoutInspector {
       }
     }
 
-    // 4b. WCAG 2.1 AA Color Contrast Evaluation
+    // 4b. Text Flow & Wrap Anomaly Evaluation
+    const textFlowIssues: TextFlowIssue[] = [];
+    if (mergedOptions.checkTextFlow !== false && inPageData.textFlowAnomalies) {
+      for (const anomaly of inPageData.textFlowAnomalies) {
+        const issue = evaluateTextFlow(anomaly);
+        if (issue) {
+          textFlowIssues.push(issue);
+        }
+      }
+    }
+
+    // 4c. WCAG 2.1 AA Color Contrast Evaluation
     const contrastIssues: ColorContrastIssue[] = [];
     if (mergedOptions.checkContrast !== false) {
       for (const el of inPageData.elements) {
@@ -286,8 +332,6 @@ export class LayoutInspector {
     const focusIndicatorIssues: FocusIndicatorIssue[] = [];
     if (mergedOptions.checkFocusIndicators !== false) {
       for (const el of interactiveElements) {
-        // Use Playwright to focus the element and read computed focus style at that moment.
-        // This correctly handles :focus-visible, :focus, and CSS class-based focus rings.
         const focusData = await this.page.evaluate((selector: string) => {
           const el = document.querySelector(selector) as HTMLElement | null;
           if (!el) return null;
@@ -353,6 +397,8 @@ export class LayoutInspector {
     // 13. Compute UX Score
     const uxScore = computeUXScore({
       overflowIssues,
+      containerOverflowIssues,
+      textFlowIssues,
       viewportFit,
       touchTargetIssues,
       readabilityIssues,
@@ -377,6 +423,8 @@ export class LayoutInspector {
       viewport,
       uxScore,
       overflowIssues,
+      containerOverflowIssues,
+      textFlowIssues,
       touchTargetIssues,
       viewportFit,
       readabilityIssues,

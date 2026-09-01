@@ -4,27 +4,99 @@ import { LayoutAuditOptions } from '../types';
 
 export const customMatchers = {
   /**
-   * Asserts that no element on the page overflows or bleeds past the viewport boundaries.
+   * Asserts that no element on the page overflows or bleeds past viewport or parent container boundaries.
    */
   async toHaveNoLayoutOverflow(page: Page, options?: LayoutAuditOptions) {
     const inspector = new LayoutInspector(page, options);
-    const audit = await inspector.audit({ checkTouchTargets: false, checkReadability: false, checkOcclusion: false, ...options });
+    const audit = await inspector.audit({
+      checkTouchTargets: false,
+      checkReadability: false,
+      checkOcclusion: false,
+      ...options
+    });
 
-    const pass = audit.overflowIssues.length === 0 && !audit.viewportFit.contentBleeds;
+    const hasViewportOverflow = audit.overflowIssues.length > 0 || audit.viewportFit.contentBleeds;
+    const hasContainerOverflow = audit.containerOverflowIssues.length > 0;
+    const pass = !hasViewportOverflow && !hasContainerOverflow;
+
     const message = () => {
       if (pass) {
         return `Expected page to have layout overflow issues, but none were detected (Page width: ${audit.viewport.width}px, Scroll width: ${audit.viewport.scrollWidth}px).`;
       }
-      const issueSummary = audit.overflowIssues
-        .map(i => `  - ${i.selector} (overflow right: +${Math.round(i.overflowRightPx)}px, fix: ${i.suggestedFix})`)
-        .join('\n');
-      return `Expected page to have NO layout overflow, but found ${audit.overflowIssues.length} overflowing element(s):\n${issueSummary}`;
+      const issues: string[] = [];
+      if (audit.overflowIssues.length > 0) {
+        issues.push(...audit.overflowIssues.map(i => `  - [Viewport Bleed] ${i.selector} (+${Math.round(i.overflowRightPx)}px, fix: ${i.suggestedFix})`));
+      }
+      if (audit.containerOverflowIssues.length > 0) {
+        issues.push(...audit.containerOverflowIssues.map(i => `  - [Container Bleed] ${i.selector} in ${i.containerSelector} (+${Math.round(i.overflowRightPx || i.overflowBottomPx || i.overflowLeftPx)}px, fix: ${i.suggestedFix})`));
+      }
+      return `Expected page to have NO layout overflow, but found ${audit.overflowIssues.length + audit.containerOverflowIssues.length} overflowing element(s):\n${issues.join('\n')}`;
     };
 
     return {
       pass,
       message,
       name: 'toHaveNoLayoutOverflow'
+    };
+  },
+
+  /**
+   * Asserts that no child element bleeds beyond its parent visual container's inner content/padding boundary.
+   */
+  async toHaveNoContainerOverflow(page: Page, options?: LayoutAuditOptions) {
+    const inspector = new LayoutInspector(page, options);
+    const audit = await inspector.audit({
+      checkTouchTargets: false,
+      checkReadability: false,
+      checkOcclusion: false,
+      ...options
+    });
+
+    const pass = audit.containerOverflowIssues.length === 0;
+    const message = () => {
+      if (pass) {
+        return `Expected page to have container overflow issues, but all elements were cleanly contained.`;
+      }
+      const issueSummary = audit.containerOverflowIssues
+        .map(i => `  - Child ${i.selector} overflows container ${i.containerSelector} by +${Math.round(i.overflowRightPx || i.overflowBottomPx || i.overflowLeftPx)}px (fix: ${i.suggestedFix})`)
+        .join('\n');
+      return `Expected no child elements to overflow their parent containers, but found ${audit.containerOverflowIssues.length} container overflow issue(s):\n${issueSummary}`;
+    };
+
+    return {
+      pass,
+      message,
+      name: 'toHaveNoContainerOverflow'
+    };
+  },
+
+  /**
+   * Asserts that text flows cleanly without awkward mid-word breaks, ragged orphan wraps on buttons/headings, or crushed flex columns.
+   */
+  async toHaveCleanTextFlow(page: Page, options?: LayoutAuditOptions) {
+    const inspector = new LayoutInspector(page, options);
+    const audit = await inspector.audit({
+      checkTouchTargets: false,
+      checkOcclusion: false,
+      checkCollisions: false,
+      ...options
+    });
+
+    const pass = audit.textFlowIssues.length === 0;
+    const message = () => {
+      if (pass) {
+        return `Expected text flow issues, but all text wrapped cleanly without mid-word breaks or orphan wraps.`;
+      }
+      const issueSummary = audit.textFlowIssues
+        .map(i => `  - [${i.anomalyType}] ${i.selector}: ${i.details} (fix: ${i.suggestedFix})`)
+        .join('\n');
+      return `Expected clean text flow, but found ${audit.textFlowIssues.length} text flow & wrap anomaly issue(s):\n${issueSummary}`;
+    };
+
+    return {
+      pass,
+      message,
+      name: 'toHaveCleanTextFlow'
     };
   },
 
@@ -263,6 +335,8 @@ declare global {
   namespace PlaywrightTest {
     interface Matchers<R, T> {
       toHaveNoLayoutOverflow(options?: LayoutAuditOptions): Promise<R>;
+      toHaveNoContainerOverflow(options?: LayoutAuditOptions): Promise<R>;
+      toHaveCleanTextFlow(options?: LayoutAuditOptions): Promise<R>;
       toHaveMobileFit(options?: LayoutAuditOptions): Promise<R>;
       toHaveTouchFriendlyTargets(options?: { minSize?: number }): Promise<R>;
       toHaveNoOccludedActions(options?: LayoutAuditOptions): Promise<R>;

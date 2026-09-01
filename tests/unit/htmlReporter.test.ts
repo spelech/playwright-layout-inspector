@@ -93,6 +93,43 @@ describe('HTML Reporter', () => {
           severity: 'critical'
         }
       ],
+      containerOverflowIssues: [
+        {
+          selector: '.auth-input-group',
+          tagName: 'div',
+          boundingBox: { x: 50, y: 100, width: 620, height: 44, top: 100, right: 670, bottom: 144, left: 50 },
+          containerSelector: '.modal-card',
+          containerTagName: 'div',
+          containerBoundingBox: { x: 50, y: 50, width: 550, height: 400, top: 50, right: 600, bottom: 450, left: 50 },
+          containerInnerBox: { top: 70, right: 580, bottom: 430, left: 70, width: 510, height: 360 },
+          overflowRightPx: 90,
+          overflowBottomPx: 0,
+          overflowLeftPx: 0,
+          overflowTopPx: 0,
+          computedStyles: {
+            overflow: 'visible', overflowX: 'visible', overflowY: 'visible',
+            width: '620px', minWidth: '0', maxWidth: 'none', height: '44px', minHeight: '0', maxHeight: 'none',
+            transform: 'none', display: 'flex', position: 'relative', boxSizing: 'border-box', margin: '0', padding: '0'
+          },
+          culpritDescription: 'Child .auth-input-group exceeds container .modal-card inner boundary by 90px on the right.',
+          suggestedFix: 'Set flex-wrap: wrap on container or use responsive grid.',
+          severity: 'critical'
+        }
+      ],
+      textFlowIssues: [
+        {
+          selector: 'h2.heading',
+          tagName: 'h2',
+          textSnippet: 'Welcome to our platform now',
+          anomalyType: 'orphan-wrap',
+          details: 'Heading text leaves a single orphan word ("now") on the last line.',
+          orphanText: 'now',
+          lineCount: 2,
+          lastLineWordCount: 1,
+          severity: 'warning',
+          suggestedFix: 'Apply text-wrap: balance'
+        }
+      ],
       touchTargetIssues: [],
       viewportFit: {
         isValidMetaViewport: true,
@@ -109,6 +146,7 @@ describe('HTML Reporter', () => {
         suggestions: ['Set overflow-x: hidden']
       },
       readabilityIssues: [],
+      contrastIssues: [],
       occlusionIssues: [],
       collisionIssues: [],
       scrollTrapIssues: [],
@@ -124,5 +162,10 @@ describe('HTML Reporter', () => {
     expect(html).toContain('Grade B');
     expect(html).toContain('#canvas');
     expect(html).toContain('Horizontal Viewport Bleed (+188px)');
+    expect(html).toContain('Container Geometric Bleed (+90px)');
+    expect(html).toContain('.auth-input-group');
+    expect(html).toContain('.modal-card');
+    expect(html).toContain('orphan wrap');
+    expect(html).toContain('Welcome to our platform now');
   });
 });

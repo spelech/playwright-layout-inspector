@@ -1,6 +1,7 @@
 import {
   AccessibleNameIssue,
   ColorContrastIssue,
+  ContainerOverflowIssue,
   ElementCollisionIssue,
   FocusIndicatorIssue,
   LayoutShiftResult,
@@ -8,6 +9,7 @@ import {
   OverflowIssue,
   ReadabilityIssue,
   ScrollTrapIssue,
+  TextFlowIssue,
   ThumbZoneAnalysis,
   TouchTargetIssue,
   UXCategoryScore,
@@ -27,6 +29,8 @@ export function calculateGrade(score: number): UXGrade {
 
 export function computeUXScore(params: {
   overflowIssues: OverflowIssue[];
+  containerOverflowIssues?: ContainerOverflowIssue[];
+  textFlowIssues?: TextFlowIssue[];
   viewportFit: ViewportFitResult;
   layoutShiftResult?: LayoutShiftResult;
   touchTargetIssues: TouchTargetIssue[];
@@ -41,6 +45,8 @@ export function computeUXScore(params: {
 }): UXScore {
   const {
     overflowIssues,
+    containerOverflowIssues = [],
+    textFlowIssues = [],
     viewportFit,
     layoutShiftResult,
     touchTargetIssues,
@@ -65,11 +71,15 @@ export function computeUXScore(params: {
   for (const issue of overflowIssues) {
     overflowPenalty += (issue.severity === 'critical' ? 8 : 3);
   }
+  for (const cIssue of containerOverflowIssues) {
+    overflowPenalty += (cIssue.severity === 'critical' ? 8 : 3);
+  }
   for (const trap of scrollTrapIssues) {
     overflowPenalty += (trap.severity === 'critical' ? 6 : 2);
   }
 
   const overflowScoreVal = Math.max(0, Math.min(maxOverflowScore, maxOverflowScore - overflowPenalty));
+  const totalOverflowIssues = overflowIssues.length + containerOverflowIssues.length + scrollTrapIssues.length + viewportFit.issues.length;
   const overflowCategory: UXCategoryScore = {
     name: 'Overflow & Viewport Fit',
     score: Math.round(overflowScoreVal * 10) / 10,
@@ -77,10 +87,10 @@ export function computeUXScore(params: {
     maxScore: maxOverflowScore,
     grade: calculateGrade((overflowScoreVal / maxOverflowScore) * 100),
     passed: overflowScoreVal >= maxOverflowScore * 0.8,
-    issueCount: overflowIssues.length + scrollTrapIssues.length + viewportFit.issues.length,
-    summary: overflowIssues.length === 0 && scrollTrapIssues.length === 0 && !viewportFit.contentBleeds
-      ? 'Perfect viewport fit without horizontal overflow or scroll traps.'
-      : `${overflowIssues.length} overflow, ${scrollTrapIssues.length} scroll trap issues detected.`
+    issueCount: totalOverflowIssues,
+    summary: overflowIssues.length === 0 && containerOverflowIssues.length === 0 && scrollTrapIssues.length === 0 && !viewportFit.contentBleeds
+      ? 'Perfect viewport and container containment fit without horizontal bleed or scroll traps.'
+      : `${overflowIssues.length} viewport overflow, ${containerOverflowIssues.length} container bleed, ${scrollTrapIssues.length} scroll trap issues detected.`
   };
 
   // 2. Stability & Layout Shift Category (20% weight)
@@ -140,6 +150,9 @@ export function computeUXScore(params: {
   for (const issue of readabilityIssues) {
     readabilityPenalty += (issue.severity === 'warning' ? 2 : 1);
   }
+  for (const tf of textFlowIssues) {
+    readabilityPenalty += (tf.severity === 'critical' ? 5 : 2);
+  }
   for (const occ of occlusionIssues) {
     readabilityPenalty += (occ.severity === 'critical' ? 5 : 2);
   }
@@ -148,7 +161,7 @@ export function computeUXScore(params: {
   }
 
   const readabilityScoreVal = Math.max(0, Math.min(maxReadabilityScore, maxReadabilityScore - readabilityPenalty));
-  const totalVisibilityIssues = readabilityIssues.length + occlusionIssues.length + collisionIssues.length;
+  const totalVisibilityIssues = readabilityIssues.length + textFlowIssues.length + occlusionIssues.length + collisionIssues.length;
   const readabilityCategory: UXCategoryScore = {
     name: 'Readability & Visual Hierarchy',
     score: Math.round(readabilityScoreVal * 10) / 10,
@@ -158,8 +171,8 @@ export function computeUXScore(params: {
     passed: readabilityScoreVal >= maxReadabilityScore * 0.8,
     issueCount: totalVisibilityIssues,
     summary: totalVisibilityIssues === 0
-      ? 'Clean visual hierarchy without element occlusion, text collision, or unreadable truncation.'
-      : `${totalVisibilityIssues} text, occlusion, or collision issue(s) detected.`
+      ? 'Clean visual hierarchy without element occlusion, text collision, awkward word breaks, or unreadable truncation.'
+      : `${totalVisibilityIssues} text, flow anomaly, occlusion, or collision issue(s) detected.`
   };
 
   // 5. Accessibility & Keyboard Navigation (15% weight)

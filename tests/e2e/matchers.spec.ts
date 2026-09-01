@@ -8,6 +8,25 @@ test.describe('Playwright Custom Matchers', () => {
 
     await page.goto('http://localhost:5173/?scenario=overflow');
     await expect(expect(page).toHaveNoLayoutOverflow()).rejects.toThrow();
+
+    await page.goto('http://localhost:5173/?scenario=container-overflow');
+    await expect(expect(page).toHaveNoLayoutOverflow()).rejects.toThrow();
+  });
+
+  test('toHaveNoContainerOverflow validates visual container containment', async ({ page }) => {
+    await page.goto('http://localhost:5173/?scenario=clean');
+    await expect(page).toHaveNoContainerOverflow();
+
+    await page.goto('http://localhost:5173/?scenario=container-overflow');
+    await expect(expect(page).toHaveNoContainerOverflow()).rejects.toThrow();
+  });
+
+  test('toHaveCleanTextFlow validates clean text wrapping and formatting', async ({ page }) => {
+    await page.goto('http://localhost:5173/?scenario=clean');
+    await expect(page).toHaveCleanTextFlow();
+
+    await page.goto('http://localhost:5173/?scenario=text-breaks');
+    await expect(expect(page).toHaveCleanTextFlow()).rejects.toThrow();
   });
 
   test('toHaveMobileFit validates mobile responsiveness', async ({ page }) => {

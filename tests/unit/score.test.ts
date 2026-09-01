@@ -21,6 +21,8 @@ describe('UX Score Calculator', () => {
 
     const score = computeUXScore({
       overflowIssues: [],
+      containerOverflowIssues: [],
+      textFlowIssues: [],
       viewportFit: perfectFit,
       touchTargetIssues: [],
       readabilityIssues: [],
@@ -76,6 +78,69 @@ describe('UX Score Calculator', () => {
 
     expect(score.totalScore).toBeLessThanOrEqual(75);
     expect(score.passed).toBe(false);
+  });
+
+  it('penalizes container overflow issues and text flow wrap anomalies', () => {
+    const cleanFit: ViewportFitResult = {
+      isValidMetaViewport: true,
+      metaContent: 'width=device-width, initial-scale=1.0',
+      allowsUserZoom: true,
+      isWidthDeviceWidth: true,
+      initialScale: 1.0,
+      isMobileOptimized: true,
+      pageScrollWidth: 1280,
+      windowWidth: 1280,
+      horizontalOverflowRatio: 1.0,
+      contentBleeds: false,
+      issues: [],
+      suggestions: []
+    };
+
+    const score = computeUXScore({
+      overflowIssues: [],
+      containerOverflowIssues: [
+        {
+          selector: '.auth-row',
+          tagName: 'div',
+          boundingBox: { x: 100, y: 100, width: 620, height: 40, top: 100, right: 720, bottom: 140, left: 100 },
+          containerSelector: '.modal-card',
+          containerTagName: 'div',
+          containerBoundingBox: { x: 100, y: 50, width: 550, height: 400, top: 50, right: 650, bottom: 450, left: 100 },
+          containerInnerBox: { top: 70, right: 630, bottom: 430, left: 120, width: 510, height: 360 },
+          overflowRightPx: 90,
+          overflowBottomPx: 0,
+          overflowLeftPx: 0,
+          overflowTopPx: 0,
+          computedStyles: {
+            overflow: 'visible', overflowX: 'visible', overflowY: 'visible',
+            width: '620px', minWidth: '0', maxWidth: 'none', height: '40px', minHeight: '0', maxHeight: 'none',
+            transform: 'none', display: 'flex', position: 'relative', boxSizing: 'border-box', margin: '0', padding: '0'
+          },
+          culpritDescription: 'Auth row bleeds 90px past modal card',
+          suggestedFix: 'Set flex-wrap: wrap',
+          severity: 'critical'
+        }
+      ],
+      textFlowIssues: [
+        {
+          selector: '.broken-word',
+          tagName: 'p',
+          textSnippet: 'Authentica tion error',
+          anomalyType: 'mid-word-break',
+          details: 'Word Authentication broken across lines',
+          severity: 'critical',
+          suggestedFix: 'Remove word-break: break-all'
+        }
+      ],
+      viewportFit: cleanFit,
+      touchTargetIssues: [],
+      readabilityIssues: [],
+      occlusionIssues: []
+    });
+
+    expect(score.totalScore).toBeLessThan(90);
+    expect(score.categories.overflowAndFit.score).toBeLessThan(25);
+    expect(score.categories.readabilityAndVisibility.score).toBeLessThan(20);
   });
 
   it('calculates grades correctly', () => {
