@@ -1,44 +1,27 @@
 import type { Page } from '@playwright/test';
 import {
-  AccessibleNameIssue,
-  BoundingBox,
-  ColorContrastIssue,
-  ContainerOverflowIssue,
   DevicePreset,
-  ElementCollisionIssue,
-  ElementComputedStyles,
   FocusIndicatorIssue,
   LayoutAuditOptions,
   LayoutAuditResult,
   LayoutShiftResult,
-  OcclusionIssue,
-  OverflowIssue,
-  ReadabilityIssue,
-  ScrollTrapIssue,
-  TextFlowIssue,
+  MatrixAuditOptions,
+  ResponsiveMatrixAuditResult,
   ThumbZoneAnalysis,
-  TouchTargetIssue,
-  ViewportFitResult,
   ZoomReflowResult
 } from '../types';
 import { getDevicePreset } from '../core/devices';
-import { calculateOverflow, generateOverflowRemediation } from '../core/overflow';
-import { evaluateContainerOverflow } from '../core/containerOverflow';
-import { evaluateTextFlow } from '../core/textFlow';
 import { computeElementDisplacement, evaluateLayoutShift, ElementSnapshot } from '../core/layoutShift';
-import { evaluateViewportFit } from '../core/viewportFit';
-import { evaluateTouchTarget } from '../core/touchTargets';
-import { evaluateTextReadability } from '../core/readability';
-import { evaluateColorContrast } from '../core/contrast';
-import { evaluateElementOcclusion } from '../core/occlusion';
 import { evaluateElementCollisions } from '../core/collisions';
-import { evaluateScrollTrap } from '../core/scrollTraps';
-import { evaluateAccessibleName, evaluateFocusIndicator } from '../core/accessibility';
+import { evaluateFocusIndicator } from '../core/accessibility';
 import { evaluateThumbZoneErgonomics } from '../core/ergonomics';
 import { evaluateZoomReflow } from '../core/zoomReflow';
 import { computeUXScore } from '../core/score';
 import { collectInPageAuditScript } from '../core/browserScript';
 import { generateHtmlReport } from '../reporter/htmlReporter';
+import { captureAndAnnotateScreenshot } from './screenshotAnnotator';
+import { runResponsiveMatrixAudit } from './matrixRunner';
+import { evaluateAuditIssues } from './auditEvaluator';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -60,11 +43,13 @@ export class LayoutInspector {
       checkTouchTargets: true,
       checkOverflow: true,
       checkContainerOverflow: true,
+      checkFlexBlowout: true,
       checkTextFlow: true,
       checkViewportFit: true,
       checkReadability: true,
       checkContrast: true,
       checkOcclusion: true,
+      checkStickyOcclusion: true,
       checkCollisions: true,
       checkScrollTraps: true,
       checkAccessibleNames: true,
@@ -88,267 +73,28 @@ export class LayoutInspector {
     const url = this.page.url();
     const isMobile = viewport.width < 768;
 
-    // 1. Viewport Fit Evaluation
-    const viewportFit: ViewportFitResult = evaluateViewportFit(viewport.metaViewport, viewport);
+    // Evaluate all visual, geometric, and flow issues
+    const issues = evaluateAuditIssues(inPageData, mergedOptions, viewport, isMobile);
 
-    // 2. Viewport Overflow Issues Evaluation
-    const overflowIssues: OverflowIssue[] = [];
-    if (mergedOptions.checkOverflow !== false) {
-      for (const el of inPageData.elements) {
-        const over = calculateOverflow(el.rect, viewport);
-        if (over.hasOverflow) {
-          const remediation = generateOverflowRemediation({
-            tagName: el.tagName,
-            selector: el.selector,
-            boundingBox: el.rect,
-            viewport,
-            styles: el.computedStyles,
-            overflowRightPx: over.overflowRightPx
-          });
-
-          overflowIssues.push({
-            selector: el.selector,
-            tagName: el.tagName,
-            id: el.id,
-            className: el.className,
-            boundingBox: el.rect,
-            viewport,
-            overflowRightPx: over.overflowRightPx,
-            overflowBottomPx: over.overflowBottomPx,
-            overflowLeftPx: over.overflowLeftPx,
-            computedStyles: el.computedStyles,
-            culpritDescription: remediation.culpritDescription,
-            suggestedFix: remediation.suggestedFix,
-            severity: over.overflowRightPx > 10 ? 'critical' : 'warning'
-          });
-        }
-      }
-    }
-
-    // 2b. Container Overflow Issues Evaluation
-    const containerOverflowIssues: ContainerOverflowIssue[] = [];
-    if (mergedOptions.checkContainerOverflow !== false && inPageData.containerOverflows) {
-      for (const cov of inPageData.containerOverflows) {
-        if (cov.isExempt) continue;
-        const issue = evaluateContainerOverflow({
-          child: {
-            selector: cov.childSelector,
-            tagName: cov.childTagName,
-            id: cov.childId,
-            className: cov.childClassName,
-            rect: cov.childRect,
-            computedStyles: cov.childStyles,
-            role: cov.childRole
-          },
-          container: {
-            selector: cov.containerSelector,
-            tagName: cov.containerTagName,
-            rect: cov.containerRect,
-            innerBox: cov.containerInnerBox,
-            computedStyles: cov.containerStyles
-          }
-        });
-        if (issue) {
-          containerOverflowIssues.push(issue);
-        }
-      }
-    }
-
-    // 3. Touch Targets Evaluation
-    const touchTargetIssues: TouchTargetIssue[] = [];
-    const interactiveElements = inPageData.elements.filter(e => e.isInteractive);
-    if (mergedOptions.checkTouchTargets !== false) {
-      const allTargets = interactiveElements.map(e => ({ selector: e.selector, boundingBox: e.rect }));
-
-      for (const el of interactiveElements) {
-        const issue = evaluateTouchTarget(
-          {
-            selector: el.selector,
-            tagName: el.tagName,
-            id: el.id,
-            className: el.className,
-            text: el.textSnippet,
-            boundingBox: el.rect
-          },
-          allTargets,
-          { minTargetSize: mergedOptions.minTouchTargetSize }
-        );
-        if (issue) {
-          touchTargetIssues.push(issue);
-        }
-      }
-    }
-
-    // 4. Readability Issues Evaluation
-    const readabilityIssues: ReadabilityIssue[] = [];
-    if (mergedOptions.checkReadability !== false) {
-      for (const el of inPageData.elements) {
-        if (!el.textSnippet || el.textSnippet.length === 0) continue;
-        const fontSizePx = parseFloat(el.computedStyles.fontSize) || 16;
-        const lineHeightPx = parseFloat(el.computedStyles.lineHeight) || undefined;
-
-        const issue = evaluateTextReadability(
-          {
-            selector: el.selector,
-            text: el.textSnippet,
-            fontSizePx,
-            lineHeightPx,
-            scrollWidth: el.scrollWidth,
-            clientWidth: el.clientWidth,
-            textOverflow: el.computedStyles.overflow,
-            overflow: el.computedStyles.overflow
-          },
-          isMobile,
-          mergedOptions.minFontSizePx
-        );
-        if (issue) {
-          readabilityIssues.push(issue);
-        }
-      }
-    }
-
-    // 4b. Text Flow & Wrap Anomaly Evaluation
-    const textFlowIssues: TextFlowIssue[] = [];
-    if (mergedOptions.checkTextFlow !== false && inPageData.textFlowAnomalies) {
-      for (const anomaly of inPageData.textFlowAnomalies) {
-        const issue = evaluateTextFlow(anomaly);
-        if (issue) {
-          textFlowIssues.push(issue);
-        }
-      }
-    }
-
-    // 4c. WCAG 2.1 AA Color Contrast Evaluation
-    const contrastIssues: ColorContrastIssue[] = [];
-    if (mergedOptions.checkContrast !== false) {
-      for (const el of inPageData.elements) {
-        if (!el.hasDirectText) continue;
-        if (!el.textSnippet || el.textSnippet.trim().length === 0) continue;
-        const fontSizePx = parseFloat(el.computedStyles.fontSize) || 16;
-        const color = el.computedStyles.color || 'rgb(0, 0, 0)';
-        const backgroundColor = el.computedStyles.backgroundColor || 'rgb(255, 255, 255)';
-        const fontWeight = el.computedStyles.fontWeight || '400';
-
-        const issue = evaluateColorContrast(
-          {
-            selector: el.selector,
-            tagName: el.tagName,
-            textSnippet: el.textSnippet,
-            color,
-            backgroundColor,
-            fontSizePx,
-            fontWeight
-          },
-          { minRatio: mergedOptions.minContrastRatio }
-        );
-        if (issue) {
-          contrastIssues.push(issue);
-        }
-      }
-    }
-
-    // 5. Multi-Point Occlusion Issues
-    const occlusionIssues: OcclusionIssue[] = [];
-    if (mergedOptions.checkOcclusion !== false) {
-      for (const occ of inPageData.occlusions) {
-        const target = inPageData.elements.find(e => e.selector === occ.selector);
-        if (target) {
-          const issue = evaluateElementOcclusion(
-            {
-              selector: target.selector,
-              tagName: target.tagName,
-              boundingBox: target.rect,
-              isInteractive: target.isInteractive
-            },
-            occ.raycastResults
-          );
-          if (issue) {
-            occlusionIssues.push(issue);
-          }
-        }
-      }
-    }
-
-    // 6. Element & Text 2D Collisions
-    let collisionIssues: ElementCollisionIssue[] = [];
-    if (mergedOptions.checkCollisions !== false) {
-      collisionIssues = evaluateElementCollisions(
-        inPageData.elements.map(e => ({
-          selector: e.selector,
-          tagName: e.tagName,
-          textSnippet: e.textSnippet,
-          rect: e.rect,
-          isInteractive: e.isInteractive,
-          isTextOnly: e.isTextOnly,
-          ancestors: e.ancestors
-        }))
-      );
-    }
-
-    // 7. Nested Scroll Traps
-    const scrollTrapIssues: ScrollTrapIssue[] = [];
-    if (mergedOptions.checkScrollTraps !== false) {
-      for (const el of inPageData.elements) {
-        const trap = evaluateScrollTrap(
-          {
-            selector: el.selector,
-            tagName: el.tagName,
-            scrollHeight: el.scrollHeight,
-            clientHeight: el.clientHeight,
-            scrollWidth: el.scrollWidth,
-            clientWidth: el.clientWidth,
-            overflowY: el.computedStyles.overflowY,
-            overflowX: el.computedStyles.overflowX
-          },
-          viewport
-        );
-        if (trap) {
-          scrollTrapIssues.push(trap);
-        }
-      }
-    }
-
-    // 8. Accessible Interactive Names
-    const accessibleNameIssues: AccessibleNameIssue[] = [];
-    if (mergedOptions.checkAccessibleNames !== false) {
-      for (const el of inPageData.elements) {
-        const issue = evaluateAccessibleName({
-          selector: el.selector,
-          tagName: el.tagName,
-          role: el.role,
-          ariaLabel: el.ariaLabel,
-          ariaLabelledBy: el.ariaLabelledBy,
-          title: el.title,
-          innerText: el.textSnippet,
-          hasSvgOrImgChild: el.hasSvgOrImgChild
-        });
-        if (issue) {
-          accessibleNameIssues.push(issue);
-        }
-      }
-    }
-
-    // 9. Focus Ring Visibility — programmatically focus each element and measure computed style
+    // Active focus indicator sampling via Playwright
     const focusIndicatorIssues: FocusIndicatorIssue[] = [];
     if (mergedOptions.checkFocusIndicators !== false) {
-      for (const el of interactiveElements) {
-        const focusData = await this.page.evaluate((selector: string) => {
-          const el = document.querySelector(selector) as HTMLElement | null;
-          if (!el) return null;
-          el.focus({ preventScroll: true });
-          const comp = window.getComputedStyle(el);
-          const result = {
+      const candidates = inPageData.elements.filter(e => e.isInteractive).slice(0, 5);
+      for (const el of candidates) {
+        const focusData = await this.page.evaluate((sel: string) => {
+          const target = document.querySelector(sel) as HTMLElement;
+          if (!target || typeof target.focus !== 'function') return null;
+          target.focus();
+          const comp = window.getComputedStyle(target);
+          return {
             outlineWidth: comp.outlineWidth,
             outlineStyle: comp.outlineStyle,
             outlineColor: comp.outlineColor,
             boxShadow: comp.boxShadow
           };
-          el.blur();
-          return result;
-        }, el.selector);
+        }, el.selector).catch(() => null);
 
         if (!focusData) continue;
-
         const issue = evaluateFocusIndicator({
           selector: el.selector,
           tagName: el.tagName,
@@ -358,15 +104,14 @@ export class LayoutInspector {
           boxShadow: focusData.boxShadow || 'none',
           isFocused: true
         });
-        if (issue) {
-          focusIndicatorIssues.push(issue);
-        }
+        if (issue) focusIndicatorIssues.push(issue);
       }
     }
 
-    // 10. Mobile Thumb-Zone Ergonomics
+    // Mobile Thumb-Zone Ergonomics
     let thumbZoneAnalysis: ThumbZoneAnalysis | undefined;
     if (mergedOptions.checkThumbZones !== false) {
+      const interactiveElements = inPageData.elements.filter(e => e.isInteractive);
       thumbZoneAnalysis = evaluateThumbZoneErgonomics(
         interactiveElements.map(e => ({
           selector: e.selector,
@@ -377,36 +122,18 @@ export class LayoutInspector {
       );
     }
 
-    // 11. 200% Zoom Reflow (Optional)
+    // Optional 200% Zoom Reflow
     let zoomReflowResult: ZoomReflowResult | undefined;
     if (mergedOptions.test200PercentZoomReflow) {
       zoomReflowResult = await this.test200PercentZoomReflow();
     }
 
-    // 12. Screenshot capture
-    let screenshotBase64: string | undefined;
-    if (mergedOptions.includeScreenshot) {
-      try {
-        const buffer = await this.page.screenshot({ fullPage: false });
-        screenshotBase64 = buffer.toString('base64');
-      } catch {
-        // Screenshot capture not supported or skipped
-      }
-    }
+    // Screenshot capture
+    const { screenshotBase64 } = await captureAndAnnotateScreenshot(this.page, mergedOptions);
 
-    // 13. Compute UX Score
+    // Compute Composite UX Score
     const uxScore = computeUXScore({
-      overflowIssues,
-      containerOverflowIssues,
-      textFlowIssues,
-      viewportFit,
-      touchTargetIssues,
-      readabilityIssues,
-      contrastIssues,
-      occlusionIssues,
-      collisionIssues,
-      scrollTrapIssues,
-      accessibleNameIssues,
+      ...issues,
       focusIndicatorIssues,
       thumbZoneAnalysis
     });
@@ -422,23 +149,20 @@ export class LayoutInspector {
       device: devicePreset,
       viewport,
       uxScore,
-      overflowIssues,
-      containerOverflowIssues,
-      textFlowIssues,
-      touchTargetIssues,
-      viewportFit,
-      readabilityIssues,
-      contrastIssues,
-      occlusionIssues,
-      collisionIssues,
-      scrollTrapIssues,
-      accessibleNameIssues,
+      ...issues,
       focusIndicatorIssues,
       thumbZoneAnalysis,
       zoomReflowResult,
       screenshotBase64,
       executionTimeMs: Date.now() - startTime
     };
+  }
+
+  /**
+   * Run multi-device responsive matrix audit across mobile, tablet, and desktop viewports.
+   */
+  async auditMatrix(options: MatrixAuditOptions = {}): Promise<ResponsiveMatrixAuditResult> {
+    return runResponsiveMatrixAudit(this.page, this, options);
   }
 
   /**
@@ -466,7 +190,6 @@ export class LayoutInspector {
       }))
     );
 
-    // Restore original font size
     await this.page.evaluate((orig) => {
       document.documentElement.style.fontSize = orig || '';
     }, originalFontSize);
@@ -486,7 +209,6 @@ export class LayoutInspector {
     action: () => Promise<void>,
     options?: { maxAcceptableScore?: number; maxAcceptableDisplacement?: number }
   ): Promise<LayoutShiftResult> {
-    // Capture before snapshot
     const beforeData = await this.page.evaluate(collectInPageAuditScript, '{}');
     const beforeSnapshots: ElementSnapshot[] = beforeData.elements.map(e => ({
       selector: e.selector,
@@ -497,13 +219,9 @@ export class LayoutInspector {
       rect: e.rect
     }));
 
-    // Perform action
     await action();
-
-    // Delay to allow CSS transitions to settle
     await this.page.waitForTimeout(200);
 
-    // Capture after snapshot
     const afterData = await this.page.evaluate(collectInPageAuditScript, '{}');
     const afterSnapshots: ElementSnapshot[] = afterData.elements.map(e => ({
       selector: e.selector,
