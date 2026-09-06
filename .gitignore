@@ -5,3 +5,8 @@ test-results/
 *.local
 .DS_Store
 *.log
+*.tgz
+audit.json
+layout-audit-report.html
+.worktrees/
+.superpowers/

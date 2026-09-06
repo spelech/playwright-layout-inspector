@@ -1,5 +1,5 @@
 {
-  "name": "playwright-layout-inspector",
+  "name": "@spelech/playwright-layout-inspector",
   "version": "1.0.0",
   "description": "Comprehensive layout & UX measurement tooling for Playwright to audit DOM overflow, visual stability, layout shifts, mobile fit, and touch target ergonomics.",
   "main": "./dist/index.js",
@@ -15,6 +15,11 @@
       "types": "./dist/matchers.d.ts",
       "import": "./dist/matchers.mjs",
       "require": "./dist/matchers.js"
+    },
+    "./fixture": {
+      "types": "./dist/fixture.d.ts",
+      "import": "./dist/fixture.mjs",
+      "require": "./dist/fixture.js"
     }
   },
   "bin": {
@@ -25,8 +30,23 @@
     "README.md",
     "LICENSE"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/spelech/playwright-layout-inspector.git"
+  },
+  "homepage": "https://github.com/spelech/playwright-layout-inspector#readme",
+  "bugs": {
+    "url": "https://github.com/spelech/playwright-layout-inspector/issues"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "prepare": "tsup",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build",
     "build": "tsup",
     "dev": "tsup --watch",
     "test": "vitest run",

@@ -1,6 +1,7 @@
-import { D as DevicePreset, B as BoundingBox, V as ViewportInfo, E as ElementComputedStyles, C as ContainerInnerBox, a as ContainerOverflowIssue, T as TextFlowAnomalyType, b as TextFlowIssue, L as LayoutShiftItem, c as LayoutShiftResult, d as ViewportFitResult, e as TouchTargetIssue, R as ReadabilityIssue, O as OcclusionIssue, f as ElementCollisionIssue, S as ScrollTrapIssue, A as AccessibleNameIssue, F as FocusIndicatorIssue, g as ColorContrastIssue, h as ThumbZoneAnalysis, Z as ZoomReflowResult, U as UXGrade, i as OverflowIssue, j as UXScore, k as LayoutAuditResult, l as LayoutAuditOptions } from './matchers-CLiGOt2H.js';
-export { m as UXCategoryScore, n as customMatchers } from './matchers-CLiGOt2H.js';
-import { Page } from '@playwright/test';
+import { D as DevicePreset, B as BoundingBox, V as ViewportInfo, E as ElementComputedStyles, C as ContainerInnerBox, c as ContainerOverflowIssue, T as TextFlowAnomalyType, d as TextFlowIssue, e as LayoutShiftItem, b as LayoutShiftResult, f as ViewportFitResult, g as TouchTargetIssue, R as ReadabilityIssue, O as OcclusionIssue, h as ElementCollisionIssue, S as ScrollTrapIssue, A as AccessibleNameIssue, F as FocusIndicatorIssue, i as ColorContrastIssue, j as ThumbZoneAnalysis, Z as ZoomReflowResult, U as UXGrade, k as OverflowIssue, l as UXScore, a as LayoutAuditResult } from './matchers-CPHnzhiQ.js';
+export { L as LayoutAuditOptions, m as UXCategoryScore, n as customMatchers } from './matchers-CPHnzhiQ.js';
+export { L as LayoutInspector } from './inspector-D8qqXofj.js';
+import '@playwright/test';
 
 declare const DEVICE_PRESETS: Record<string, DevicePreset>;
 declare function getDevicePreset(nameOrDevice: string | DevicePreset): DevicePreset;
@@ -460,29 +461,4 @@ declare function getInPageAuditFunctionString(): string;
 
 declare function generateHtmlReport(result: LayoutAuditResult): string;
 
-declare class LayoutInspector {
-    private page;
-    private defaultOptions;
-    constructor(page: Page, defaultOptions?: LayoutAuditOptions);
-    /**
-     * Run a comprehensive UX & layout audit on the current page state.
-     */
-    audit(options?: LayoutAuditOptions): Promise<LayoutAuditResult>;
-    /**
-     * Test WCAG 1.4.10 Reflow at 200% zoom.
-     */
-    test200PercentZoomReflow(zoomFactor?: number): Promise<ZoomReflowResult>;
-    /**
-     * Track layout shift and element displacement occurring during an asynchronous action.
-     */
-    trackShifts(action: () => Promise<void>, options?: {
-        maxAcceptableScore?: number;
-        maxAcceptableDisplacement?: number;
-    }): Promise<LayoutShiftResult>;
-    /**
-     * Generate and write an interactive HTML report to disk.
-     */
-    generateReport(result: LayoutAuditResult, outputPath: string): Promise<string>;
-}
-
-export { AccessibleNameIssue, BoundingBox, ColorContrastIssue, ContainerInnerBox, ContainerOverflowIssue, DEVICE_PRESETS, DevicePreset, ElementCollisionIssue, ElementComputedStyles, type ElementSnapshot, FocusIndicatorIssue, type InPageAuditData, LayoutAuditOptions, LayoutAuditResult, LayoutInspector, LayoutShiftItem, LayoutShiftResult, OcclusionIssue, OverflowIssue, type PointSample, type RawTextFlowAnomaly, ReadabilityIssue, ScrollTrapIssue, TextFlowAnomalyType, TextFlowIssue, type ThumbZone, ThumbZoneAnalysis, TouchTargetIssue, UXGrade, UXScore, ViewportFitResult, ViewportInfo, ZoomReflowResult, calculateContainerOverflow, calculateGrade, calculateOverflow, categorizeThumbZone, collectInPageAuditScript, computeAABBOverlapArea, computeElementDisplacement, computeUXScore, evaluateAccessibleName, evaluateColorContrast, evaluateContainerOverflow, evaluateElementCollisions, evaluateElementOcclusion, evaluateFocusIndicator, evaluateLayoutShift, evaluateScrollTrap, evaluateTextFlow, evaluateTextReadability, evaluateThumbZoneErgonomics, evaluateTouchTarget, evaluateViewportFit, evaluateZoomReflow, generateContainerOverflowRemediation, generateHtmlReport, generateOverflowRemediation, generateRaycastSamplePoints, generateTextFlowRemediation, getContrastRatio, getDevicePreset, getInPageAuditFunctionString, getRelativeLuminance, isExemptFromContainerOverflow, parseColor };
+export { AccessibleNameIssue, BoundingBox, ColorContrastIssue, ContainerInnerBox, ContainerOverflowIssue, DEVICE_PRESETS, DevicePreset, ElementCollisionIssue, ElementComputedStyles, type ElementSnapshot, FocusIndicatorIssue, type InPageAuditData, LayoutAuditResult, LayoutShiftItem, LayoutShiftResult, OcclusionIssue, OverflowIssue, type PointSample, type RawTextFlowAnomaly, ReadabilityIssue, ScrollTrapIssue, TextFlowAnomalyType, TextFlowIssue, type ThumbZone, ThumbZoneAnalysis, TouchTargetIssue, UXGrade, UXScore, ViewportFitResult, ViewportInfo, ZoomReflowResult, calculateContainerOverflow, calculateGrade, calculateOverflow, categorizeThumbZone, collectInPageAuditScript, computeAABBOverlapArea, computeElementDisplacement, computeUXScore, evaluateAccessibleName, evaluateColorContrast, evaluateContainerOverflow, evaluateElementCollisions, evaluateElementOcclusion, evaluateFocusIndicator, evaluateLayoutShift, evaluateScrollTrap, evaluateTextFlow, evaluateTextReadability, evaluateThumbZoneErgonomics, evaluateTouchTarget, evaluateViewportFit, evaluateZoomReflow, generateContainerOverflowRemediation, generateHtmlReport, generateOverflowRemediation, generateRaycastSamplePoints, generateTextFlowRemediation, getContrastRatio, getDevicePreset, getInPageAuditFunctionString, getRelativeLuminance, isExemptFromContainerOverflow, parseColor };
