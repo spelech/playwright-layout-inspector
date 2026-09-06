@@ -136,271 +136,6 @@ function getDevicePreset(nameOrDevice) {
   return DEVICE_PRESETS["Samsung Galaxy S25+"];
 }
 
-// src/core/overflow.ts
-function calculateOverflow(rect, viewport) {
-  const overflowRightPx = Math.max(0, rect.right - viewport.width);
-  const overflowBottomPx = Math.max(0, rect.bottom - viewport.height);
-  const overflowLeftPx = Math.max(0, -rect.left);
-  const hasOverflow = overflowRightPx > 1 || overflowLeftPx > 1;
-  return {
-    overflowRightPx: Math.round(overflowRightPx * 100) / 100,
-    overflowBottomPx: Math.round(overflowBottomPx * 100) / 100,
-    overflowLeftPx: Math.round(overflowLeftPx * 100) / 100,
-    hasOverflow
-  };
-}
-function generateOverflowRemediation(issue) {
-  const { tagName, selector, boundingBox, viewport, styles, overflowRightPx } = issue;
-  const widthPx = boundingBox.width;
-  const viewportWidth = viewport.width;
-  let culpritDescription = `Element <${tagName}> (${selector}) has width ${Math.round(widthPx)}px and extends ${Math.round(overflowRightPx)}px beyond viewport width (${viewportWidth}px).`;
-  let suggestedFix = `Set max-width: 100% or overflow-x: auto on parent container.`;
-  if (styles.transform && styles.transform !== "none" && styles.transform.includes("matrix")) {
-    culpritDescription += ` Element has a CSS transform applied (${styles.transform}) which scales it past the screen boundary.`;
-    suggestedFix = `Ensure transformed container has 'overflow: hidden' or compute dynamic scale based on viewport width: scale = Math.min(1.0, (viewportWidth - padding) / contentWidth).`;
-  } else if (styles.width && styles.width.includes("px") && parseFloat(styles.width) > viewportWidth) {
-    culpritDescription += ` Explicit fixed width of ${styles.width} exceeds viewport (${viewportWidth}px).`;
-    suggestedFix = `Replace fixed width '${styles.width}' with responsive max-width (e.g. max-w-full, width: 100%, or fit-content) or add media queries.`;
-  } else if (styles.minWidth && styles.minWidth !== "auto" && parseFloat(styles.minWidth) > viewportWidth) {
-    culpritDescription += ` Fixed min-width '${styles.minWidth}' forces element to overflow.`;
-    suggestedFix = `Set 'min-width: 0' or 'min-width: 100%' for responsive layout.`;
-  }
-  return { culpritDescription, suggestedFix };
-}
-
-// src/core/containerOverflow.ts
-function calculateContainerOverflow(childRect, containerInnerBox, thresholdPx = 1.5) {
-  const overflowRightPx = Math.max(0, childRect.right - containerInnerBox.right);
-  const overflowBottomPx = Math.max(0, childRect.bottom - containerInnerBox.bottom);
-  const overflowLeftPx = Math.max(0, containerInnerBox.left - childRect.left);
-  const overflowTopPx = Math.max(0, containerInnerBox.top - childRect.top);
-  const hasOverflow = overflowRightPx > thresholdPx || overflowLeftPx > thresholdPx || overflowBottomPx > thresholdPx;
-  return {
-    overflowRightPx: Math.round(overflowRightPx * 100) / 100,
-    overflowBottomPx: Math.round(overflowBottomPx * 100) / 100,
-    overflowLeftPx: Math.round(overflowLeftPx * 100) / 100,
-    overflowTopPx: Math.round(overflowTopPx * 100) / 100,
-    hasOverflow
-  };
-}
-function isExemptFromContainerOverflow(element) {
-  const {
-    tagName,
-    className = "",
-    role,
-    position = "static",
-    isPopoverOrTooltip,
-    isCornerControl,
-    isDecorative,
-    containerStyles
-  } = element;
-  if (isPopoverOrTooltip || isCornerControl || isDecorative) {
-    return true;
-  }
-  if (position === "fixed") {
-    return true;
-  }
-  tagName.toLowerCase();
-  const classLower = (className || "").toLowerCase();
-  const roleLower = (role || "").toLowerCase();
-  const floatingRoles = ["tooltip", "menu", "listbox", "dialog", "alertdialog"];
-  if (roleLower && floatingRoles.includes(roleLower)) {
-    return true;
-  }
-  const floatingClassKeywords = [
-    "tooltip",
-    "popover",
-    "dropdown",
-    "menu",
-    "toast",
-    "floating",
-    "popper",
-    "modal-backdrop",
-    "select-options",
-    "tippy-box"
-  ];
-  if (floatingClassKeywords.some((keyword) => classLower.includes(keyword))) {
-    return true;
-  }
-  const cornerClassKeywords = [
-    "btn-close",
-    "close-btn",
-    "modal-close",
-    "dialog-close",
-    "badge",
-    "indicator",
-    "chip-corner",
-    "pill"
-  ];
-  if (cornerClassKeywords.some((keyword) => classLower.includes(keyword))) {
-    return true;
-  }
-  if (containerStyles) {
-    const isScrollableX = containerStyles.overflowX === "auto" || containerStyles.overflowX === "scroll";
-    const isScrollableY = containerStyles.overflowY === "auto" || containerStyles.overflowY === "scroll";
-    if (isScrollableX && isScrollableY) {
-      return true;
-    }
-  }
-  return false;
-}
-function generateContainerOverflowRemediation(params) {
-  const {
-    childTagName,
-    childSelector,
-    childRect,
-    childStyles,
-    containerTagName,
-    containerSelector,
-    containerInnerBox,
-    overflowRightPx,
-    overflowBottomPx,
-    overflowLeftPx
-  } = params;
-  const childWidth = Math.round(childRect.width);
-  const containerInnerWidth = Math.round(containerInnerBox.width);
-  let culpritDescription = `Child <${childTagName}> (${childSelector}) of width ${childWidth}px exceeds container <${containerTagName}> (${containerSelector}) inner content boundary (${containerInnerWidth}px)`;
-  let suggestedFix = `Apply 'flex-wrap: wrap' on container or 'max-width: 100%' / 'min-width: 0' on children.`;
-  if (overflowRightPx > 0) {
-    culpritDescription += ` by ${Math.round(overflowRightPx)}px on the right`;
-  }
-  if (overflowLeftPx > 0) {
-    culpritDescription += ` by ${Math.round(overflowLeftPx)}px on the left`;
-  }
-  if (overflowBottomPx > 0) {
-    culpritDescription += ` and ${Math.round(overflowBottomPx)}px on the bottom`;
-  }
-  culpritDescription += ".";
-  if (childStyles.display === "flex" || childStyles.display === "inline-flex" || childStyles.flexWrap === "nowrap") {
-    culpritDescription += ` Multi-item flex row has 'flex-wrap: nowrap' forcing children past container edge.`;
-    suggestedFix = `Set 'flex-wrap: wrap' on flex parent or use responsive grid 'grid-template-columns: repeat(auto-fit, minmax(140px, 1fr))'.`;
-  } else if (childStyles.width && childStyles.width.includes("px") && parseFloat(childStyles.width) > containerInnerWidth) {
-    culpritDescription += ` Explicit fixed width of ${childStyles.width} exceeds container width (${containerInnerWidth}px).`;
-    suggestedFix = `Replace fixed width '${childStyles.width}' with 'width: 100%' / 'max-width: 100%' or responsive layout constraints.`;
-  } else if (childStyles.minWidth && childStyles.minWidth !== "auto" && parseFloat(childStyles.minWidth) > containerInnerWidth) {
-    culpritDescription += ` Fixed min-width '${childStyles.minWidth}' forces element outside parent boundary.`;
-    suggestedFix = `Set 'min-width: 0' or 'min-width: 100%' to allow responsive resizing within container.`;
-  } else if (["input", "select", "textarea", "table", "img", "canvas"].includes(childTagName.toLowerCase())) {
-    suggestedFix = `Ensure <${childTagName}> has 'max-width: 100%; box-sizing: border-box;' and flex children have 'min-width: 0;'.`;
-  }
-  return { culpritDescription, suggestedFix };
-}
-function evaluateContainerOverflow(params) {
-  const { child, container } = params;
-  if (isExemptFromContainerOverflow({
-    tagName: child.tagName,
-    className: child.className,
-    id: child.id,
-    role: child.role,
-    position: child.computedStyles.position,
-    isPopoverOrTooltip: child.isPopoverOrTooltip,
-    isCornerControl: child.isCornerControl,
-    isDecorative: child.isDecorative,
-    containerStyles: container.computedStyles
-  })) {
-    return null;
-  }
-  const overflow = calculateContainerOverflow(child.rect, container.innerBox);
-  if (!overflow.hasOverflow) {
-    return null;
-  }
-  const remediation = generateContainerOverflowRemediation({
-    childTagName: child.tagName,
-    childSelector: child.selector,
-    childRect: child.rect,
-    childStyles: child.computedStyles,
-    containerTagName: container.tagName,
-    containerSelector: container.selector,
-    containerInnerBox: container.innerBox,
-    overflowRightPx: overflow.overflowRightPx,
-    overflowBottomPx: overflow.overflowBottomPx,
-    overflowLeftPx: overflow.overflowLeftPx
-  });
-  const severity = overflow.overflowRightPx > 10 || overflow.overflowLeftPx > 10 || overflow.overflowBottomPx > 20 ? "critical" : "warning";
-  return {
-    selector: child.selector,
-    tagName: child.tagName,
-    id: child.id,
-    className: child.className,
-    boundingBox: child.rect,
-    containerSelector: container.selector,
-    containerTagName: container.tagName,
-    containerBoundingBox: container.rect,
-    containerInnerBox: container.innerBox,
-    overflowRightPx: overflow.overflowRightPx,
-    overflowBottomPx: overflow.overflowBottomPx,
-    overflowLeftPx: overflow.overflowLeftPx,
-    overflowTopPx: overflow.overflowTopPx,
-    computedStyles: child.computedStyles,
-    culpritDescription: remediation.culpritDescription,
-    suggestedFix: remediation.suggestedFix,
-    severity
-  };
-}
-
-// src/core/textFlow.ts
-function generateTextFlowRemediation(anomaly) {
-  const {
-    selector,
-    tagName,
-    textSnippet,
-    anomalyType,
-    word,
-    orphanText,
-    lineCount,
-    elementWidth,
-    computedStyles
-  } = anomaly;
-  switch (anomalyType) {
-    case "mid-word-break": {
-      const brokenWord = word || textSnippet;
-      const details = `Word "${brokenWord}" in <${tagName}> (${selector}) is awkwardly broken across multiple lines without a hyphen due to 'word-break: break-all' or insufficient container width.`;
-      const suggestedFix = `Remove 'word-break: break-all' and use 'overflow-wrap: break-word' or 'hyphens: auto'. Ensure container has sufficient min-width (e.g., 'min-width: fit-content').`;
-      const severity = computedStyles?.wordBreak === "break-all" ? "critical" : "warning";
-      return { details, suggestedFix, severity };
-    }
-    case "broken-multiline-button": {
-      const details = `Interactive button <${tagName}> (${selector}) has text "${textSnippet}" that awkwardly wraps across ${lineCount || 2} lines (trailing: "${orphanText || ""}").`;
-      const suggestedFix = `Set 'white-space: nowrap' or increase button min-width / padding (e.g. min-w-fit, px-4) so the button label stays on a single line.`;
-      return { details, suggestedFix, severity: "critical" };
-    }
-    case "orphan-wrap": {
-      const details = `<${tagName}> (${selector}) text leaves a single orphan word ("${orphanText || ""}") on the last line.`;
-      const suggestedFix = `Apply 'text-wrap: balance' or 'text-wrap: pretty' to balance line lengths, or widen the container boundary.`;
-      return { details, suggestedFix, severity: "warning" };
-    }
-    case "crushed-flex-column": {
-      const width = elementWidth ? Math.round(elementWidth) : 0;
-      const details = `Flex column <${tagName}> (${selector}) is crushed to ${width}px width, causing text clipping or overflowing content in a multi-column row.`;
-      const suggestedFix = `Set 'flex: 1 1 0; min-width: 120px;' on flex items, or add 'flex-wrap: wrap' on the parent container.`;
-      return { details, suggestedFix, severity: "critical" };
-    }
-    default: {
-      return {
-        details: `Text flow anomaly detected in <${tagName}> (${selector}).`,
-        suggestedFix: `Check line wrapping and container constraints.`,
-        severity: "warning"
-      };
-    }
-  }
-}
-function evaluateTextFlow(anomaly) {
-  const remediation = generateTextFlowRemediation(anomaly);
-  return {
-    selector: anomaly.selector,
-    tagName: anomaly.tagName,
-    textSnippet: anomaly.textSnippet,
-    anomalyType: anomaly.anomalyType,
-    details: remediation.details,
-    lineCount: anomaly.lineCount,
-    lastLineWordCount: anomaly.lastLineWordCount,
-    orphanText: anomaly.orphanText,
-    computedStyles: anomaly.computedStyles,
-    severity: remediation.severity,
-    suggestedFix: remediation.suggestedFix
-  };
-}
-
 // src/core/layoutShift.ts
 function computeElementDisplacement(before, after, viewport) {
   const deltaX = after.rect.x - before.rect.x;
@@ -483,278 +218,6 @@ function evaluateLayoutShift(beforeSnapshots, afterSnapshots, viewport, options)
   };
 }
 
-// src/core/viewportFit.ts
-function evaluateViewportFit(metaContent, viewport) {
-  const issues = [];
-  const suggestions = [];
-  let isValidMetaViewport = false;
-  let allowsUserZoom = true;
-  let isWidthDeviceWidth = false;
-  let initialScale = 1;
-  let isMobileOptimized = false;
-  if (metaContent) {
-    isValidMetaViewport = true;
-    const parts = metaContent.toLowerCase().split(",").map((s) => s.trim());
-    for (const part of parts) {
-      if (part.includes("width=device-width")) {
-        isWidthDeviceWidth = true;
-      }
-      if (part.includes("user-scalable=no") || part.includes("user-scalable=0")) {
-        allowsUserZoom = false;
-        issues.push("Viewport meta tag explicitly disables user pinch-to-zoom (user-scalable=no/0), violating WCAG 1.4.4 resize standard.");
-        suggestions.push('Remove "user-scalable=no" and allow users to zoom content freely.');
-      }
-      if (part.includes("maximum-scale=1") || part.includes("maximum-scale=1.0")) {
-        allowsUserZoom = false;
-        issues.push("Viewport meta tag restricts maximum zoom scale to 1.0 (maximum-scale=1), preventing users from zooming.");
-        suggestions.push("Set maximum-scale to 5.0 or remove maximum-scale constraint.");
-      }
-      if (part.startsWith("initial-scale=")) {
-        const val = parseFloat(part.replace("initial-scale=", ""));
-        if (!isNaN(val)) initialScale = val;
-      }
-    }
-    if (isWidthDeviceWidth && initialScale >= 0.9 && initialScale <= 1.1) {
-      isMobileOptimized = true;
-    }
-  } else {
-    issues.push('Missing <meta name="viewport"> tag. Mobile browsers will render page in desktop emulation mode (980px viewport).');
-    suggestions.push('Add <meta name="viewport" content="width=device-width, initial-scale=1.0"> to your HTML <head>.');
-  }
-  const pageScrollWidth = viewport.scrollWidth;
-  const windowWidth = viewport.width;
-  const horizontalOverflowRatio = Math.round(pageScrollWidth / windowWidth * 1e3) / 1e3;
-  const contentBleeds = horizontalOverflowRatio > 1.01;
-  if (contentBleeds) {
-    const bleedPx = Math.round(pageScrollWidth - windowWidth);
-    issues.push(`Page content width (${pageScrollWidth}px) exceeds viewport width (${windowWidth}px) by ${bleedPx}px, causing unwanted horizontal scroll.`);
-    suggestions.push(`Inspect overflowing child elements, ensure max-w-full and overflow-x: hidden/clip on page body.`);
-  }
-  return {
-    isValidMetaViewport,
-    metaContent,
-    allowsUserZoom,
-    isWidthDeviceWidth,
-    initialScale,
-    isMobileOptimized,
-    pageScrollWidth,
-    windowWidth,
-    horizontalOverflowRatio,
-    contentBleeds,
-    issues,
-    suggestions
-  };
-}
-
-// src/core/touchTargets.ts
-function evaluateTouchTarget(target, adjacentTargets, options) {
-  const standard = options?.standard ?? "WCAG_AA";
-  const minTargetSize = options?.minTargetSize ?? (standard === "WCAG_AAA" ? 44 : standard === "MOBILE_RECOMMENDED" ? 48 : 24);
-  const width = Math.round(target.boundingBox.width * 100) / 100;
-  const height = Math.round(target.boundingBox.height * 100) / 100;
-  if (width <= 0 || height <= 0) return null;
-  const failsWidth = width < minTargetSize;
-  const failsHeight = height < minTargetSize;
-  if (!failsWidth && !failsHeight) {
-    return null;
-  }
-  const spacingIssues = [];
-  if (adjacentTargets && adjacentTargets.length > 0) {
-    const centerA = {
-      x: target.boundingBox.x + target.boundingBox.width / 2,
-      y: target.boundingBox.y + target.boundingBox.height / 2
-    };
-    for (const adj of adjacentTargets) {
-      if (adj.selector === target.selector) continue;
-      const centerB = {
-        x: adj.boundingBox.x + adj.boundingBox.width / 2,
-        y: adj.boundingBox.y + adj.boundingBox.height / 2
-      };
-      const centerDist = Math.hypot(centerA.x - centerB.x, centerA.y - centerB.y);
-      const edgeDist = centerDist - (Math.max(width, height) / 2 + Math.max(adj.boundingBox.width, adj.boundingBox.height) / 2);
-      if (edgeDist < 8 && centerDist < minTargetSize) {
-        spacingIssues.push({
-          adjacentSelector: adj.selector,
-          distancePx: Math.max(0, Math.round(edgeDist))
-        });
-      }
-    }
-  }
-  const severity = width < 20 || height < 20 || spacingIssues.length > 0 ? "critical" : "warning";
-  let suggestion = `Increase interactive target size to at least ${minTargetSize}x${minTargetSize}px (currently ${Math.round(width)}x${Math.round(height)}px) using padding (e.g. 'p-2' or 'p-3') or min-h-[${minTargetSize}px] min-w-[${minTargetSize}px].`;
-  if (spacingIssues.length > 0) {
-    suggestion += ` Add spacing/gap between this element and adjacent interactive target (${spacingIssues[0].adjacentSelector}) to prevent mis-taps.`;
-  }
-  return {
-    selector: target.selector,
-    tagName: target.tagName,
-    id: target.id,
-    className: target.className,
-    text: target.text,
-    boundingBox: target.boundingBox,
-    width,
-    height,
-    standard,
-    minRequiredSize: minTargetSize,
-    severity,
-    spacingIssues: spacingIssues.length > 0 ? spacingIssues : void 0,
-    suggestion
-  };
-}
-
-// src/core/readability.ts
-function evaluateTextReadability(element, isMobile, minFontSizePx = 12) {
-  const isIllegibleOnMobile = isMobile && element.fontSizePx < minFontSizePx;
-  const isTruncated = element.scrollWidth > element.clientWidth + 2 && (element.overflow === "hidden" || element.textOverflow === "ellipsis");
-  const hasAccessibleTooltip = !!element.hasAccessibleTooltip;
-  if (!isIllegibleOnMobile && !isTruncated) {
-    return null;
-  }
-  if (isTruncated && hasAccessibleTooltip && !isIllegibleOnMobile) {
-    return null;
-  }
-  const severity = isIllegibleOnMobile && element.fontSizePx < 10 ? "warning" : "info";
-  let suggestion = "";
-  if (isIllegibleOnMobile && isTruncated) {
-    suggestion = `Font size (${Math.round(element.fontSizePx)}px) is too small on mobile (< ${minFontSizePx}px) and text is truncated (${element.scrollWidth}px > ${element.clientWidth}px). Increase font-size to text-xs/text-sm and provide adequate width or wrapping.`;
-  } else if (isIllegibleOnMobile) {
-    suggestion = `Font size (${Math.round(element.fontSizePx)}px) is below mobile readability threshold (${minFontSizePx}px). Increase to at least 12px (text-xs/text-sm).`;
-  } else if (isTruncated) {
-    suggestion = `Text is overflowing and clipped/truncated without full expansion. Consider adding title/tooltip attribute or flexible wrapping.`;
-  }
-  return {
-    selector: element.selector,
-    textSnippet: element.text.length > 50 ? element.text.substring(0, 47) + "..." : element.text,
-    fontSizePx: Math.round(element.fontSizePx * 10) / 10,
-    lineHeightPx: element.lineHeightPx ? Math.round(element.lineHeightPx * 10) / 10 : void 0,
-    isTruncated,
-    isIllegibleOnMobile,
-    hasAccessibleTooltip,
-    severity,
-    suggestion
-  };
-}
-
-// src/core/contrast.ts
-function parseColor(colorStr) {
-  if (!colorStr || colorStr === "transparent") {
-    return { r: 0, g: 0, b: 0, a: 0 };
-  }
-  const rgbMatch = colorStr.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
-  if (rgbMatch) {
-    return {
-      r: parseInt(rgbMatch[1], 10),
-      g: parseInt(rgbMatch[2], 10),
-      b: parseInt(rgbMatch[3], 10),
-      a: rgbMatch[4] !== void 0 ? parseFloat(rgbMatch[4]) : 1
-    };
-  }
-  if (colorStr.startsWith("#")) {
-    const hex = colorStr.slice(1);
-    if (hex.length === 3) {
-      return {
-        r: parseInt(hex[0] + hex[0], 16),
-        g: parseInt(hex[1] + hex[1], 16),
-        b: parseInt(hex[2] + hex[2], 16),
-        a: 1
-      };
-    }
-    if (hex.length === 6) {
-      return {
-        r: parseInt(hex.slice(0, 2), 16),
-        g: parseInt(hex.slice(2, 4), 16),
-        b: parseInt(hex.slice(4, 6), 16),
-        a: 1
-      };
-    }
-    if (hex.length === 8) {
-      return {
-        r: parseInt(hex.slice(0, 2), 16),
-        g: parseInt(hex.slice(2, 4), 16),
-        b: parseInt(hex.slice(4, 6), 16),
-        a: parseInt(hex.slice(6, 8), 16) / 255
-      };
-    }
-  }
-  return null;
-}
-function getRelativeLuminance(rgba) {
-  const [rs, gs, bs] = [rgba.r / 255, rgba.g / 255, rgba.b / 255].map((val) => {
-    return val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4);
-  });
-  return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
-}
-function getContrastRatio(fgColorStr, bgColorStr) {
-  const fg = parseColor(fgColorStr);
-  const bg = parseColor(bgColorStr) || { r: 255, g: 255, b: 255};
-  if (!fg) return 21;
-  const effectiveFg = fg.a < 1 ? {
-    r: Math.round(fg.r * fg.a + bg.r * (1 - fg.a)),
-    g: Math.round(fg.g * fg.a + bg.g * (1 - fg.a)),
-    b: Math.round(fg.b * fg.a + bg.b * (1 - fg.a))} : fg;
-  const l1 = getRelativeLuminance(effectiveFg);
-  const l2 = getRelativeLuminance(bg);
-  const lighter = Math.max(l1, l2);
-  const darker = Math.min(l1, l2);
-  return (lighter + 0.05) / (darker + 0.05);
-}
-function evaluateColorContrast(element, options) {
-  if (!element.textSnippet || element.textSnippet.trim().length === 0) {
-    return null;
-  }
-  const isBold = parseInt(element.fontWeight, 10) >= 700 || element.fontWeight === "bold";
-  const isLargeText = element.fontSizePx >= 24 || element.fontSizePx >= 18.66 && isBold;
-  const defaultRequiredRatio = isLargeText ? 3 : 4.5;
-  const requiredRatio = options?.minRatio !== void 0 ? options.minRatio : defaultRequiredRatio;
-  const ratio = Math.round(getContrastRatio(element.color, element.backgroundColor) * 100) / 100;
-  if (ratio >= requiredRatio) {
-    return null;
-  }
-  const severity = ratio < 3 ? "critical" : "warning";
-  const suggestion = `Text contrast ratio is ${ratio}:1 (${element.color} on ${element.backgroundColor}), which fails WCAG AA requirement of ${requiredRatio}:1 for ${isLargeText ? "large" : "normal"} text. Adjust text or background color to improve contrast.`;
-  return {
-    selector: element.selector,
-    tagName: element.tagName,
-    textSnippet: element.textSnippet.length > 50 ? element.textSnippet.substring(0, 47) + "..." : element.textSnippet,
-    foregroundColor: element.color,
-    backgroundColor: element.backgroundColor,
-    contrastRatio: ratio,
-    requiredRatio,
-    fontSizePx: element.fontSizePx,
-    isBold,
-    severity,
-    suggestion
-  };
-}
-
-// src/core/occlusion.ts
-function evaluateElementOcclusion(target, raycastResults) {
-  if (!target.isInteractive || raycastResults.length === 0) {
-    return null;
-  }
-  const occludedPoints = raycastResults.filter((r) => !r.isTargetOrDescendant);
-  if (occludedPoints.length === 0) {
-    return null;
-  }
-  const occludedAreaRatio = Math.round(occludedPoints.length / raycastResults.length * 100) / 100;
-  const primaryOccluder = occludedPoints[0];
-  const severity = occludedAreaRatio >= 0.5 ? "critical" : "warning";
-  const suggestion = `Element <${target.tagName}> (${target.selector}) has ${Math.round(occludedAreaRatio * 100)}% of its interactive click area occluded by <${primaryOccluder.topTagName}> (${primaryOccluder.topSelector}). Check z-index, fixed/sticky navigation overlays, or pointer-events: none.`;
-  return {
-    selector: target.selector,
-    tagName: target.tagName,
-    boundingBox: target.boundingBox,
-    occludedBySelector: primaryOccluder.topSelector,
-    occludedByTagName: primaryOccluder.topTagName,
-    occludedPointsCount: occludedPoints.length,
-    totalPointsChecked: raycastResults.length,
-    occludedAreaRatio,
-    isInteractive: target.isInteractive,
-    severity,
-    suggestion
-  };
-}
-
 // src/core/collisions.ts
 function computeAABBOverlapArea(a, b) {
   const overlapX = Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left));
@@ -800,46 +263,6 @@ function evaluateElementCollisions(elements, minOverlapAreaPx = 25) {
     }
   }
   return issues;
-}
-
-// src/core/scrollTraps.ts
-function evaluateScrollTrap(container, viewport) {
-  const hasVerticalScroll = (container.overflowY === "auto" || container.overflowY === "scroll") && container.scrollHeight > container.clientHeight + 5;
-  const hasHorizontalScroll = (container.overflowX === "auto" || container.overflowX === "scroll") && container.scrollWidth > container.clientWidth + 5;
-  if (!hasVerticalScroll && !hasHorizontalScroll) {
-    return null;
-  }
-  const viewportRatio = Math.round(container.clientHeight / viewport.height * 100) / 100;
-  const isTrapRisk = viewportRatio >= 0.65 && hasVerticalScroll;
-  if (!isTrapRisk && container.clientHeight < 120 && hasVerticalScroll) {
-    return {
-      selector: container.selector,
-      tagName: container.tagName,
-      scrollHeight: container.scrollHeight,
-      clientHeight: container.clientHeight,
-      scrollWidth: container.scrollWidth,
-      clientWidth: container.clientWidth,
-      viewportRatio,
-      isTrapRisk: false,
-      severity: "warning",
-      suggestion: `Nested scroll container (${container.selector}) has very small height (${container.clientHeight}px) causing awkward scrolling. Consider increasing height or using pagination.`
-    };
-  }
-  if (!isTrapRisk) {
-    return null;
-  }
-  return {
-    selector: container.selector,
-    tagName: container.tagName,
-    scrollHeight: container.scrollHeight,
-    clientHeight: container.clientHeight,
-    scrollWidth: container.scrollWidth,
-    clientWidth: container.clientWidth,
-    viewportRatio,
-    isTrapRisk: true,
-    severity: "critical",
-    suggestion: `Nested scroll container (${container.selector}) occupies ${Math.round(viewportRatio * 100)}% of the viewport and traps mobile touch-scroll. Add 'overscroll-behavior: contain' and provide visible scroll affordance/padding so users can scroll the outer page.`
-  };
 }
 
 // src/core/accessibility.ts
@@ -996,6 +419,7 @@ function computeUXScore(params) {
   const {
     overflowIssues,
     containerOverflowIssues = [],
+    flexBlowoutIssues = [],
     textFlowIssues = [],
     viewportFit,
     layoutShiftResult,
@@ -1003,6 +427,7 @@ function computeUXScore(params) {
     readabilityIssues,
     contrastIssues = [],
     occlusionIssues,
+    stickyOcclusionIssues = [],
     collisionIssues = [],
     scrollTrapIssues = [],
     accessibleNameIssues = [],
@@ -1020,11 +445,14 @@ function computeUXScore(params) {
   for (const cIssue of containerOverflowIssues) {
     overflowPenalty += cIssue.severity === "critical" ? 8 : 3;
   }
+  for (const fIssue of flexBlowoutIssues) {
+    overflowPenalty += fIssue.severity === "critical" ? 8 : 4;
+  }
   for (const trap of scrollTrapIssues) {
     overflowPenalty += trap.severity === "critical" ? 6 : 2;
   }
   const overflowScoreVal = Math.max(0, Math.min(maxOverflowScore, maxOverflowScore - overflowPenalty));
-  const totalOverflowIssues = overflowIssues.length + containerOverflowIssues.length + scrollTrapIssues.length + viewportFit.issues.length;
+  const totalOverflowIssues = overflowIssues.length + containerOverflowIssues.length + flexBlowoutIssues.length + scrollTrapIssues.length + viewportFit.issues.length;
   const overflowCategory = {
     name: "Overflow & Viewport Fit",
     score: Math.round(overflowScoreVal * 10) / 10,
@@ -1033,7 +461,7 @@ function computeUXScore(params) {
     grade: calculateGrade(overflowScoreVal / maxOverflowScore * 100),
     passed: overflowScoreVal >= maxOverflowScore * 0.8,
     issueCount: totalOverflowIssues,
-    summary: overflowIssues.length === 0 && containerOverflowIssues.length === 0 && scrollTrapIssues.length === 0 && !viewportFit.contentBleeds ? "Perfect viewport and container containment fit without horizontal bleed or scroll traps." : `${overflowIssues.length} viewport overflow, ${containerOverflowIssues.length} container bleed, ${scrollTrapIssues.length} scroll trap issues detected.`
+    summary: overflowIssues.length === 0 && containerOverflowIssues.length === 0 && flexBlowoutIssues.length === 0 && scrollTrapIssues.length === 0 && !viewportFit.contentBleeds ? "Perfect viewport and container containment fit without horizontal bleed or scroll traps." : `${overflowIssues.length} viewport overflow, ${containerOverflowIssues.length} container bleed, ${flexBlowoutIssues.length} flex blowout, ${scrollTrapIssues.length} scroll trap issues detected.`
   };
   const maxStabilityScore = 20;
   let stabilityScoreVal = maxStabilityScore;
@@ -1086,11 +514,14 @@ function computeUXScore(params) {
   for (const occ of occlusionIssues) {
     readabilityPenalty += occ.severity === "critical" ? 5 : 2;
   }
+  for (const sOcc of stickyOcclusionIssues) {
+    readabilityPenalty += sOcc.severity === "critical" ? 6 : 3;
+  }
   for (const col of collisionIssues) {
     readabilityPenalty += col.severity === "critical" ? 5 : 2;
   }
   const readabilityScoreVal = Math.max(0, Math.min(maxReadabilityScore, maxReadabilityScore - readabilityPenalty));
-  const totalVisibilityIssues = readabilityIssues.length + textFlowIssues.length + occlusionIssues.length + collisionIssues.length;
+  const totalVisibilityIssues = readabilityIssues.length + textFlowIssues.length + occlusionIssues.length + stickyOcclusionIssues.length + collisionIssues.length;
   const readabilityCategory = {
     name: "Readability & Visual Hierarchy",
     score: Math.round(readabilityScoreVal * 10) / 10,
@@ -1145,10 +576,19 @@ function computeUXScore(params) {
 function collectInPageAuditScript(optionsJson = "{}") {
   const options = JSON.parse(optionsJson || "{}");
   const ignoreSelectors = options.ignoreSelectors || [];
+  const round2 = (n) => Math.round(n * 100) / 100;
+  const toRect = (r) => ({
+    x: round2(r.x ?? r.left),
+    y: round2(r.y ?? r.top),
+    width: round2(r.width),
+    height: round2(r.height),
+    top: round2(r.top),
+    right: round2(r.right),
+    bottom: round2(r.bottom),
+    left: round2(r.left)
+  });
   function getCssSelector(el) {
-    if (el.id) {
-      return `#${CSS.escape(el.id)}`;
-    }
+    if (el.id) return `#${CSS.escape(el.id)}`;
     const path3 = [];
     let current = el;
     while (current && current.nodeType === Node.ELEMENT_NODE) {
@@ -1169,9 +609,7 @@ function collectInPageAuditScript(optionsJson = "{}") {
             selector += `.${CSS.escape(firstClass)}`;
           }
         }
-        if (nth > 1) {
-          selector += `:nth-of-type(${nth})`;
-        }
+        if (nth > 1) selector += `:nth-of-type(${nth})`;
       }
       path3.unshift(selector);
       current = current.parentElement;
@@ -1179,24 +617,17 @@ function collectInPageAuditScript(optionsJson = "{}") {
     }
     return path3.join(" > ");
   }
-  const metaEl = document.querySelector('meta[name="viewport"]');
-  const metaViewport = metaEl ? metaEl.getAttribute("content") : null;
-  const vpWidth = window.visualViewport ? window.visualViewport.width : document.documentElement.clientWidth || window.innerWidth;
-  const vpHeight = window.visualViewport ? window.visualViewport.height : document.documentElement.clientHeight || window.innerHeight;
-  const vp = {
-    width: Math.round(vpWidth * 100) / 100,
-    height: Math.round(vpHeight * 100) / 100,
-    devicePixelRatio: window.devicePixelRatio || 1,
-    scrollX: window.scrollX,
-    scrollY: window.scrollY,
-    scrollWidth: Math.max(document.documentElement.scrollWidth, document.body ? document.body.scrollWidth : 0),
-    scrollHeight: Math.max(document.documentElement.scrollHeight, document.body ? document.body.scrollHeight : 0),
-    metaViewport
-  };
-  const allElements = Array.from(document.querySelectorAll("body *"));
-  const collectedElements = [];
-  const containerOverflows = [];
-  const textFlowAnomalies = [];
+  function parseRgba(str) {
+    if (!str || str === "transparent") return null;
+    const m = str.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+    if (!m) return null;
+    return {
+      r: parseInt(m[1], 10),
+      g: parseInt(m[2], 10),
+      b: parseInt(m[3], 10),
+      a: m[4] !== void 0 ? parseFloat(m[4]) : 1
+    };
+  }
   function isVisualContainer(targetEl, style) {
     const t = targetEl.tagName.toLowerCase();
     if (t === "body" || t === "html") return false;
@@ -1205,9 +636,7 @@ function collectInPageAuditScript(optionsJson = "{}") {
     const r = targetEl.getAttribute("role");
     if (r && ["dialog", "alertdialog", "region", "tabpanel", "group", "form"].includes(r)) return true;
     const c = (typeof targetEl.className === "string" ? targetEl.className : "").toLowerCase();
-    if (/modal|card|panel|dialog|drawer|sheet|popup|box|container|wrapper|frame|window|tabpanel/.test(c)) {
-      return true;
-    }
+    if (/modal|card|panel|dialog|drawer|sheet|popup|box|container|wrapper|frame|window|tabpanel/.test(c)) return true;
     const hasBg = !!(style.backgroundColor && style.backgroundColor !== "rgba(0, 0, 0, 0)" && style.backgroundColor !== "transparent");
     const hasBorder = !!((parseFloat(style.borderTopWidth || "0") > 0 || parseFloat(style.borderWidth || "0") > 0) && style.borderStyle !== "none");
     const hasShadow = !!(style.boxShadow && style.boxShadow !== "none");
@@ -1239,14 +668,14 @@ function collectInPageAuditScript(optionsJson = "{}") {
           selector: getCssSelector(curr),
           tagName: curr.tagName.toLowerCase(),
           rect: cRect,
-          innerBox: {
-            top: Math.round(innerTop * 100) / 100,
-            right: Math.round(innerRight * 100) / 100,
-            bottom: Math.round(innerBottom * 100) / 100,
-            left: Math.round(innerLeft * 100) / 100,
-            width: Math.round(Math.max(0, innerRight - innerLeft) * 100) / 100,
-            height: Math.round(Math.max(0, innerBottom - innerTop) * 100) / 100
-          },
+          innerBox: toRect({
+            top: innerTop,
+            right: innerRight,
+            bottom: innerBottom,
+            left: innerLeft,
+            width: Math.max(0, innerRight - innerLeft),
+            height: Math.max(0, innerBottom - innerTop)
+          }),
           comp
         };
       }
@@ -1260,52 +689,44 @@ function collectInPageAuditScript(optionsJson = "{}") {
     const role = el.getAttribute("role") || "";
     if (["tooltip", "menu", "listbox", "dialog", "alertdialog"].includes(role)) return true;
     const cls = (typeof el.className === "string" ? el.className : "").toLowerCase();
-    if (/tooltip|popover|dropdown|menu|toast|floating|popper|modal-backdrop|select-options|tippy-box/.test(cls)) {
-      return true;
-    }
+    if (/tooltip|popover|dropdown|menu|toast|floating|popper|modal-backdrop|select-options|tippy-box/.test(cls)) return true;
     const ariaLabel = (el.getAttribute("aria-label") || "").toLowerCase();
-    if (/close|btn-close|dismiss|badge|indicator|pill|tag/.test(cls) || ariaLabel.includes("close") || ariaLabel.includes("dismiss")) {
-      if (comp.position === "absolute") {
-        return true;
-      }
+    if ((/close|btn-close|dismiss|badge|indicator|pill|tag/.test(cls) || ariaLabel.includes("close") || ariaLabel.includes("dismiss")) && comp.position === "absolute") {
+      return true;
     }
     if ((containerComp.overflowX === "auto" || containerComp.overflowX === "scroll") && (containerComp.overflowY === "auto" || containerComp.overflowY === "scroll")) {
       return true;
     }
-    if (el.getAttribute("aria-hidden") === "true" && comp.pointerEvents === "none") {
-      return true;
-    }
-    return false;
+    return el.getAttribute("aria-hidden") === "true" && comp.pointerEvents === "none";
   }
+  const metaEl = document.querySelector('meta[name="viewport"]');
+  const metaViewport = metaEl ? metaEl.getAttribute("content") : null;
+  const vpWidth = window.visualViewport ? window.visualViewport.width : document.documentElement.clientWidth || window.innerWidth;
+  const vpHeight = window.visualViewport ? window.visualViewport.height : document.documentElement.clientHeight || window.innerHeight;
+  const vp = {
+    width: round2(vpWidth),
+    height: round2(vpHeight),
+    devicePixelRatio: window.devicePixelRatio || 1,
+    scrollX: window.scrollX,
+    scrollY: window.scrollY,
+    scrollWidth: Math.max(document.documentElement.scrollWidth, document.body ? document.body.scrollWidth : 0),
+    scrollHeight: Math.max(document.documentElement.scrollHeight, document.body ? document.body.scrollHeight : 0),
+    metaViewport
+  };
+  const allElements = Array.from(document.querySelectorAll("body *"));
+  const collectedElements = [];
+  const containerOverflows = [];
+  const textFlowAnomalies = [];
   const reportedOverflowParentSelectors = /* @__PURE__ */ new Set();
   for (const el of allElements) {
-    let parseRgba2 = function(str) {
-      if (!str || str === "transparent") return null;
-      const m = str.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
-      if (!m) return null;
-      return {
-        r: parseInt(m[1], 10),
-        g: parseInt(m[2], 10),
-        b: parseInt(m[3], 10),
-        a: m[4] !== void 0 ? parseFloat(m[4]) : 1
-      };
-    };
     const tag = el.tagName.toLowerCase();
-    if (["script", "style", "noscript", "path", "g", "defs", "clippath", "symbol", "use", "br", "hr"].includes(tag)) {
-      continue;
-    }
+    if (["script", "style", "noscript", "path", "g", "defs", "clippath", "symbol", "use", "br", "hr"].includes(tag)) continue;
     const selector = getCssSelector(el);
-    if (ignoreSelectors.some((ign) => selector.includes(ign))) {
-      continue;
-    }
+    if (ignoreSelectors.some((ign) => selector.includes(ign))) continue;
     const rect = el.getBoundingClientRect();
-    if (rect.width <= 0 && rect.height <= 0) {
-      continue;
-    }
+    if (rect.width <= 0 && rect.height <= 0) continue;
     const comp = window.getComputedStyle(el);
-    if (comp.display === "none" || comp.visibility === "hidden" || parseFloat(comp.opacity) === 0) {
-      continue;
-    }
+    if (comp.display === "none" || comp.visibility === "hidden" || parseFloat(comp.opacity) === 0) continue;
     const role = el.getAttribute("role");
     const isButton = tag === "button" || role === "button" || role === "tab" || role === "menuitem" || typeof el.className === "string" && el.className.includes("btn");
     const isLink = tag === "a" && el.hasAttribute("href");
@@ -1333,9 +754,7 @@ function collectInPageAuditScript(optionsJson = "{}") {
           break;
         }
       }
-      if (tag === "input" || tag === "textarea" || tag === "select" || isTextOnly) {
-        hasDirectText = true;
-      }
+      if (tag === "input" || tag === "textarea" || tag === "select" || isTextOnly) hasDirectText = true;
     }
     const ancestors = [];
     let p = el.parentElement;
@@ -1347,10 +766,8 @@ function collectInPageAuditScript(optionsJson = "{}") {
     let currBgEl = el;
     while (currBgEl) {
       const bgStyle = window.getComputedStyle(currBgEl).backgroundColor;
-      const parsed = parseRgba2(bgStyle);
-      if (parsed && parsed.a > 0) {
-        bgStack.unshift(parsed);
-      }
+      const parsed = parseRgba(bgStyle);
+      if (parsed && parsed.a > 0) bgStack.unshift(parsed);
       currBgEl = currBgEl.parentElement;
     }
     let compBg = { r: 255, g: 255, b: 255};
@@ -1419,16 +836,7 @@ function collectInPageAuditScript(optionsJson = "{}") {
       textSnippet,
       ancestors,
       hasDirectText,
-      rect: {
-        x: Math.round(rect.x * 100) / 100,
-        y: Math.round(rect.y * 100) / 100,
-        width: Math.round(rect.width * 100) / 100,
-        height: Math.round(rect.height * 100) / 100,
-        top: Math.round(rect.top * 100) / 100,
-        right: Math.round(rect.right * 100) / 100,
-        bottom: Math.round(rect.bottom * 100) / 100,
-        left: Math.round(rect.left * 100) / 100
-      },
+      rect: toRect(rect),
       computedStyles: computedStylesObj,
       scrollWidth: el.scrollWidth,
       clientWidth: el.clientWidth,
@@ -1452,47 +860,25 @@ function collectInPageAuditScript(optionsJson = "{}") {
       const overBottom = Math.max(0, rect.bottom - inner.bottom);
       const overTop = Math.max(0, inner.top - rect.top);
       if ((overRight > 1.5 || overLeft > 1.5 || overBottom > 2) && !isExempt) {
-        const hasOverflowingAncestor = ancestors.some((anc) => reportedOverflowParentSelectors.has(anc));
-        if (!hasOverflowingAncestor) {
+        if (!ancestors.some((anc) => reportedOverflowParentSelectors.has(anc))) {
           reportedOverflowParentSelectors.add(selector);
           containerOverflows.push({
             childSelector: selector,
             childTagName: tag,
             childId: el.id || "",
             childClassName: typeof el.className === "string" ? el.className : "",
-            childRect: {
-              x: Math.round(rect.x * 100) / 100,
-              y: Math.round(rect.y * 100) / 100,
-              width: Math.round(rect.width * 100) / 100,
-              height: Math.round(rect.height * 100) / 100,
-              top: Math.round(rect.top * 100) / 100,
-              right: Math.round(rect.right * 100) / 100,
-              bottom: Math.round(rect.bottom * 100) / 100,
-              left: Math.round(rect.left * 100) / 100
-            },
+            childRect: toRect(rect),
             childStyles: computedStylesObj,
             childRole: role,
             containerSelector: visualContainer.selector,
             containerTagName: visualContainer.tagName,
-            containerRect: {
-              x: Math.round(visualContainer.rect.x * 100) / 100,
-              y: Math.round(visualContainer.rect.y * 100) / 100,
-              width: Math.round(visualContainer.rect.width * 100) / 100,
-              height: Math.round(visualContainer.rect.height * 100) / 100,
-              top: Math.round(visualContainer.rect.top * 100) / 100,
-              right: Math.round(visualContainer.rect.right * 100) / 100,
-              bottom: Math.round(visualContainer.rect.bottom * 100) / 100,
-              left: Math.round(visualContainer.rect.left * 100) / 100
-            },
+            containerRect: toRect(visualContainer.rect),
             containerInnerBox: inner,
-            containerStyles: {
-              overflowX: visualContainer.comp.overflowX,
-              overflowY: visualContainer.comp.overflowY
-            },
-            overflowRightPx: Math.round(overRight * 100) / 100,
-            overflowBottomPx: Math.round(overBottom * 100) / 100,
-            overflowLeftPx: Math.round(overLeft * 100) / 100,
-            overflowTopPx: Math.round(overTop * 100) / 100,
+            containerStyles: { overflowX: visualContainer.comp.overflowX, overflowY: visualContainer.comp.overflowY },
+            overflowRightPx: round2(overRight),
+            overflowBottomPx: round2(overBottom),
+            overflowLeftPx: round2(overLeft),
+            overflowTopPx: round2(overTop),
             isExempt
           });
         }
@@ -1508,30 +894,21 @@ function collectInPageAuditScript(optionsJson = "{}") {
         let match;
         while ((match = regex.exec(val)) !== null) {
           const word = match[0];
-          const startIndex = match.index;
-          const endIndex = startIndex + word.length;
           try {
             const range = document.createRange();
-            range.setStart(textNode, startIndex);
-            range.setEnd(textNode, endIndex);
+            range.setStart(textNode, match.index);
+            range.setEnd(textNode, match.index + word.length);
             const rects = range.getClientRects();
-            if (rects.length > 1) {
-              const firstTop = rects[0].top;
-              const lastTop = rects[rects.length - 1].top;
-              if (Math.abs(lastTop - firstTop) > 3) {
-                textFlowAnomalies.push({
-                  selector,
-                  tagName: tag,
-                  textSnippet,
-                  anomalyType: "mid-word-break",
-                  word,
-                  computedStyles: {
-                    wordBreak: comp.wordBreak,
-                    overflowWrap: comp.overflowWrap
-                  }
-                });
-                break;
-              }
+            if (rects.length > 1 && Math.abs(rects[rects.length - 1].top - rects[0].top) > 3) {
+              textFlowAnomalies.push({
+                selector,
+                tagName: tag,
+                textSnippet,
+                anomalyType: "mid-word-break",
+                word,
+                computedStyles: { wordBreak: comp.wordBreak, overflowWrap: comp.overflowWrap }
+              });
+              break;
             }
           } catch {
           }
@@ -1559,24 +936,17 @@ function collectInPageAuditScript(optionsJson = "{}") {
               r.setStart(tNode, wordStart);
               r.setEnd(tNode, wordStart + w.length);
               const rRect = r.getBoundingClientRect();
-              if (rRect.width > 0 && rRect.height > 0) {
-                measuredWords.push({ top: rRect.top, word: w });
-              }
+              if (rRect.width > 0 && rRect.height > 0) measuredWords.push({ top: rRect.top, word: w });
             } catch {
             }
           }
         }
         const lineGroups = [];
         for (const item of measuredWords) {
-          let placed = false;
-          for (const group of lineGroups) {
-            if (Math.abs(item.top - group.top) < 6) {
-              group.words.push(item.word);
-              placed = true;
-              break;
-            }
-          }
-          if (!placed) {
+          let grp = lineGroups.find((g) => Math.abs(item.top - g.top) < 6);
+          if (grp) {
+            grp.words.push(item.word);
+          } else {
             lineGroups.push({ top: item.top, words: [item.word] });
           }
         }
@@ -1593,10 +963,7 @@ function collectInPageAuditScript(optionsJson = "{}") {
               lineCount: lines.length,
               orphanText: lastLineText,
               lastLineWordCount: lastLine.length,
-              computedStyles: {
-                whiteSpace: comp.whiteSpace,
-                textWrap: comp.textWrap
-              }
+              computedStyles: { whiteSpace: comp.whiteSpace, textWrap: comp.textWrap }
             });
           } else if ((isHeadingTag || isLabelTag) && lastLine.length === 1 && lines[0].length >= 2) {
             textFlowAnomalies.push({
@@ -1607,10 +974,7 @@ function collectInPageAuditScript(optionsJson = "{}") {
               lineCount: lines.length,
               orphanText: lastLineText,
               lastLineWordCount: 1,
-              computedStyles: {
-                textWrap: comp.textWrap || "normal",
-                whiteSpace: comp.whiteSpace
-              }
+              computedStyles: { textWrap: comp.textWrap || "normal", whiteSpace: comp.whiteSpace }
             });
           }
         }
@@ -1630,10 +994,7 @@ function collectInPageAuditScript(optionsJson = "{}") {
             elementWidth: rect.width,
             scrollWidth: el.scrollWidth,
             clientWidth: el.clientWidth,
-            computedStyles: {
-              display: comp.display,
-              flex: comp.flex
-            }
+            computedStyles: { display: comp.display, flex: comp.flex }
           });
         }
       }
@@ -1643,9 +1004,7 @@ function collectInPageAuditScript(optionsJson = "{}") {
   for (const item of collectedElements) {
     if (!item.isInteractive) continue;
     const r = item.rect;
-    if (r.right < 0 || r.left > vp.width || r.bottom < 0 || r.top > vp.height) {
-      continue;
-    }
+    if (r.right < 0 || r.left > vp.width || r.bottom < 0 || r.top > vp.height) continue;
     const insetX = Math.min(4, r.width * 0.1);
     const insetY = Math.min(4, r.height * 0.1);
     const points = [
@@ -1662,24 +1021,62 @@ function collectInPageAuditScript(optionsJson = "{}") {
       if (pt.x >= 0 && pt.x <= vp.width && pt.y >= 0 && pt.y <= vp.height) {
         const topEl = document.elementFromPoint(pt.x, pt.y);
         if (topEl) {
-          const topSelector = getCssSelector(topEl);
-          const isTargetOrDescendant = topEl === targetDomEl || targetDomEl.contains(topEl) || topEl.contains(targetDomEl);
           raycastResults.push({
             point: pt,
-            topSelector,
+            topSelector: getCssSelector(topEl),
             topTagName: topEl.tagName.toLowerCase(),
-            isTargetOrDescendant
+            isTargetOrDescendant: topEl === targetDomEl || targetDomEl.contains(topEl) || topEl.contains(targetDomEl)
           });
         }
       }
     }
     if (raycastResults.some((res) => !res.isTargetOrDescendant)) {
-      occlusions.push({
-        selector: item.selector,
-        tagName: item.tagName,
-        boundingBox: item.rect,
-        raycastResults
-      });
+      occlusions.push({ selector: item.selector, tagName: item.tagName, boundingBox: item.rect, raycastResults });
+    }
+  }
+  const stickyItems = collectedElements.filter((el) => {
+    const pos = el.computedStyles.position;
+    return (pos === "fixed" || pos === "sticky") && el.rect.width > 20 && el.rect.height > 10;
+  });
+  const stickyOcclusions = [];
+  for (const sticky of stickyItems) {
+    const sRect = sticky.rect;
+    const sZ = parseInt(sticky.computedStyles.zIndex || "0", 10) || 0;
+    for (const target of collectedElements) {
+      if (target.selector === sticky.selector || target.ancestors?.includes(sticky.selector)) continue;
+      const isHeading = ["h1", "h2", "h3", "h4", "h5", "h6"].includes(target.tagName.toLowerCase());
+      if (!target.isInteractive && !isHeading) continue;
+      const tRect = target.rect;
+      if ((parseInt(target.computedStyles.zIndex || "0", 10) || 0) > sZ) continue;
+      const interLeft = Math.max(sRect.left, tRect.left);
+      const interTop = Math.max(sRect.top, tRect.top);
+      const interRight = Math.min(sRect.right, tRect.right);
+      const interBottom = Math.min(sRect.bottom, tRect.bottom);
+      if (interRight > interLeft + 2 && interBottom > interTop + 2) {
+        const overlapWidth = round2(interRight - interLeft);
+        const overlapHeight = round2(interBottom - interTop);
+        const overlapArea = overlapWidth * overlapHeight;
+        if (overlapArea / Math.max(1, tRect.width * tRect.height) > 0.15 || overlapArea > 100) {
+          stickyOcclusions.push({
+            stickySelector: sticky.selector,
+            stickyTagName: sticky.tagName,
+            positionType: sticky.computedStyles.position,
+            occludedSelector: target.selector,
+            occludedTagName: target.tagName,
+            isInteractive: target.isInteractive,
+            overlapRect: toRect({
+              x: interLeft,
+              y: interTop,
+              width: overlapWidth,
+              height: overlapHeight,
+              top: interTop,
+              right: interRight,
+              bottom: interBottom,
+              left: interLeft
+            })
+          });
+        }
+      }
     }
   }
   return {
@@ -1687,7 +1084,8 @@ function collectInPageAuditScript(optionsJson = "{}") {
     elements: collectedElements,
     containerOverflows,
     textFlowAnomalies,
-    occlusions
+    occlusions,
+    stickyOcclusions
   };
 }
 
@@ -2052,6 +1450,1077 @@ function renderCategoryCard(cat, icon) {
 function escapeHtml(str) {
   return (str || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
+
+// src/playwright/screenshotAnnotator.ts
+async function captureAndAnnotateScreenshot(page, options = {}) {
+  if (!options.includeScreenshot) {
+    return {};
+  }
+  try {
+    const buffer = await page.screenshot({ fullPage: false });
+    const screenshotBase64 = buffer.toString("base64");
+    return { screenshotBase64 };
+  } catch {
+    return {};
+  }
+}
+
+// src/playwright/matrixRunner.ts
+var DEFAULT_MATRIX_PRESETS = [
+  "Samsung Galaxy S25+",
+  "iPad Air",
+  "Desktop 1080p"
+];
+async function runResponsiveMatrixAudit(page, inspector, options = {}) {
+  const deviceNames = options.devices && options.devices.length > 0 ? options.devices : DEFAULT_MATRIX_PRESETS;
+  const devices = deviceNames.map((d) => {
+    if (typeof d === "string") {
+      return getDevicePreset(d) || {
+        name: d,
+        width: 1280,
+        height: 720,
+        deviceScaleFactor: 1,
+        isMobile: false,
+        hasTouch: false,
+        category: "desktop"
+      };
+    }
+    const customDev = d;
+    return {
+      name: customDev.name,
+      width: customDev.width,
+      height: customDev.height,
+      deviceScaleFactor: customDev.deviceScaleFactor ?? 1,
+      isMobile: customDev.isMobile ?? customDev.width < 768,
+      hasTouch: customDev.hasTouch ?? customDev.width < 768,
+      category: customDev.category ?? (customDev.width < 768 ? "mobile" : "desktop")
+    };
+  });
+  const originalViewport = page.viewportSize();
+  const results = {};
+  const deviceScores = {};
+  try {
+    for (const dev of devices) {
+      await page.setViewportSize({ width: dev.width, height: dev.height });
+      await page.waitForTimeout(150);
+      const auditResult = await inspector.audit({
+        ...options,
+        device: dev
+      });
+      results[dev.name] = auditResult;
+      deviceScores[dev.name] = auditResult.uxScore.totalScore;
+    }
+  } finally {
+    if (originalViewport) {
+      await page.setViewportSize(originalViewport);
+    }
+  }
+  const issueDeviceMap = /* @__PURE__ */ new Map();
+  for (const [deviceName, res] of Object.entries(results)) {
+    for (const ov of res.overflowIssues) {
+      const key = `overflow:${ov.selector}`;
+      if (!issueDeviceMap.has(key)) {
+        issueDeviceMap.set(key, { category: "Viewport Overflow", selector: ov.selector, description: ov.culpritDescription, devices: /* @__PURE__ */ new Set() });
+      }
+      issueDeviceMap.get(key).devices.add(deviceName);
+    }
+    for (const co of res.containerOverflowIssues) {
+      const key = `containerOverflow:${co.selector}`;
+      if (!issueDeviceMap.has(key)) {
+        issueDeviceMap.set(key, { category: "Container Overflow", selector: co.selector, description: co.culpritDescription, devices: /* @__PURE__ */ new Set() });
+      }
+      issueDeviceMap.get(key).devices.add(deviceName);
+    }
+    for (const fb of res.flexBlowoutIssues || []) {
+      const key = `flexBlowout:${fb.selector}`;
+      if (!issueDeviceMap.has(key)) {
+        issueDeviceMap.set(key, { category: "Flex Blowout", selector: fb.selector, description: fb.suggestion, devices: /* @__PURE__ */ new Set() });
+      }
+      issueDeviceMap.get(key).devices.add(deviceName);
+    }
+    for (const so of res.stickyOcclusionIssues || []) {
+      const key = `stickyOcclusion:${so.occludedSelector}`;
+      if (!issueDeviceMap.has(key)) {
+        issueDeviceMap.set(key, { category: "Sticky Occlusion", selector: so.occludedSelector, description: so.suggestion, devices: /* @__PURE__ */ new Set() });
+      }
+      issueDeviceMap.get(key).devices.add(deviceName);
+    }
+    for (const tt of res.touchTargetIssues) {
+      const key = `touchTarget:${tt.selector}`;
+      if (!issueDeviceMap.has(key)) {
+        issueDeviceMap.set(key, { category: "Touch Target", selector: tt.selector, description: tt.suggestion, devices: /* @__PURE__ */ new Set() });
+      }
+      issueDeviceMap.get(key).devices.add(deviceName);
+    }
+    for (const cc of res.contrastIssues) {
+      const key = `contrast:${cc.selector}`;
+      if (!issueDeviceMap.has(key)) {
+        issueDeviceMap.set(key, { category: "Contrast", selector: cc.selector, description: cc.suggestion, devices: /* @__PURE__ */ new Set() });
+      }
+      issueDeviceMap.get(key).devices.add(deviceName);
+    }
+  }
+  const globalIssues = [];
+  const breakpointSpecificIssues = [];
+  for (const item of issueDeviceMap.values()) {
+    if (item.devices.size === devices.length) {
+      globalIssues.push({
+        category: item.category,
+        selector: item.selector,
+        description: item.description,
+        count: item.devices.size
+      });
+    } else {
+      for (const devName of item.devices) {
+        breakpointSpecificIssues.push({
+          device: devName,
+          category: item.category,
+          selector: item.selector,
+          description: item.description
+        });
+      }
+    }
+  }
+  const scores = Object.values(deviceScores);
+  const overallScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length * 10) / 10 : 100;
+  return {
+    devices,
+    results,
+    overallScore,
+    deviceScores,
+    matrixSummary: {
+      globalIssues,
+      breakpointSpecificIssues
+    }
+  };
+}
+
+// src/core/overflow.ts
+function calculateOverflow(rect, viewport) {
+  const overflowRightPx = Math.max(0, rect.right - viewport.width);
+  const overflowBottomPx = Math.max(0, rect.bottom - viewport.height);
+  const overflowLeftPx = Math.max(0, -rect.left);
+  const hasOverflow = overflowRightPx > 1 || overflowLeftPx > 1;
+  return {
+    overflowRightPx: Math.round(overflowRightPx * 100) / 100,
+    overflowBottomPx: Math.round(overflowBottomPx * 100) / 100,
+    overflowLeftPx: Math.round(overflowLeftPx * 100) / 100,
+    hasOverflow
+  };
+}
+function generateOverflowRemediation(issue) {
+  const tagName = issue.tagName || "element";
+  const selector = issue.selector || "";
+  const widthPx = issue.boundingBox ? issue.boundingBox.width : 0;
+  const viewportWidth = issue.viewport ? issue.viewport.width : 0;
+  const overflowRightPx = issue.overflowRightPx ?? issue.overflowAmountPx ?? 0;
+  const styles = issue.styles || issue.computedStyles || {};
+  let culpritDescription = `Element <${tagName}> (${selector}) has width ${Math.round(widthPx)}px and extends ${Math.round(overflowRightPx)}px beyond viewport width (${viewportWidth}px).`;
+  let suggestedFix = `Set max-width: 100% or overflow-x: auto on parent container.`;
+  if (styles.transform && styles.transform !== "none" && styles.transform.includes("matrix")) {
+    culpritDescription += ` Element has a CSS transform applied (${styles.transform}) which scales it past the screen boundary.`;
+    suggestedFix = `Ensure transformed container has 'overflow: hidden' or compute dynamic scale based on viewport width: scale = Math.min(1.0, (viewportWidth - padding) / contentWidth).`;
+  } else if (styles.width && styles.width.includes("px") && parseFloat(styles.width) > viewportWidth) {
+    culpritDescription += ` Explicit fixed width of ${styles.width} exceeds viewport (${viewportWidth}px).`;
+    suggestedFix = `Replace fixed width '${styles.width}' with responsive max-width (e.g. max-w-full, width: 100%, or fit-content) or add media queries.`;
+  } else if (styles.minWidth && styles.minWidth !== "auto" && parseFloat(styles.minWidth) > viewportWidth) {
+    culpritDescription += ` Fixed min-width '${styles.minWidth}' forces element to overflow.`;
+    suggestedFix = `Set 'min-width: 0' or 'min-width: 100%' for responsive layout.`;
+  }
+  return { culpritDescription, suggestedFix };
+}
+
+// src/core/containerOverflow.ts
+function calculateContainerOverflow(childRect, containerInnerBox, thresholdPx = 1.5) {
+  const overflowRightPx = Math.max(0, childRect.right - containerInnerBox.right);
+  const overflowBottomPx = Math.max(0, childRect.bottom - containerInnerBox.bottom);
+  const overflowLeftPx = Math.max(0, containerInnerBox.left - childRect.left);
+  const overflowTopPx = Math.max(0, containerInnerBox.top - childRect.top);
+  const hasOverflow = overflowRightPx > thresholdPx || overflowLeftPx > thresholdPx || overflowBottomPx > thresholdPx;
+  return {
+    overflowRightPx: Math.round(overflowRightPx * 100) / 100,
+    overflowBottomPx: Math.round(overflowBottomPx * 100) / 100,
+    overflowLeftPx: Math.round(overflowLeftPx * 100) / 100,
+    overflowTopPx: Math.round(overflowTopPx * 100) / 100,
+    hasOverflow
+  };
+}
+function isExemptFromContainerOverflow(element) {
+  const {
+    tagName,
+    className = "",
+    role,
+    position = "static",
+    isPopoverOrTooltip,
+    isCornerControl,
+    isDecorative,
+    containerStyles
+  } = element;
+  if (isPopoverOrTooltip || isCornerControl || isDecorative) {
+    return true;
+  }
+  if (position === "fixed") {
+    return true;
+  }
+  tagName.toLowerCase();
+  const classLower = (className || "").toLowerCase();
+  const roleLower = (role || "").toLowerCase();
+  const floatingRoles = ["tooltip", "menu", "listbox", "dialog", "alertdialog"];
+  if (roleLower && floatingRoles.includes(roleLower)) {
+    return true;
+  }
+  const floatingClassKeywords = [
+    "tooltip",
+    "popover",
+    "dropdown",
+    "menu",
+    "toast",
+    "floating",
+    "popper",
+    "modal-backdrop",
+    "select-options",
+    "tippy-box"
+  ];
+  if (floatingClassKeywords.some((keyword) => classLower.includes(keyword))) {
+    return true;
+  }
+  const cornerClassKeywords = [
+    "btn-close",
+    "close-btn",
+    "modal-close",
+    "dialog-close",
+    "badge",
+    "indicator",
+    "chip-corner",
+    "pill"
+  ];
+  if (cornerClassKeywords.some((keyword) => classLower.includes(keyword))) {
+    return true;
+  }
+  if (containerStyles) {
+    const isScrollableX = containerStyles.overflowX === "auto" || containerStyles.overflowX === "scroll";
+    const isScrollableY = containerStyles.overflowY === "auto" || containerStyles.overflowY === "scroll";
+    if (isScrollableX && isScrollableY) {
+      return true;
+    }
+  }
+  return false;
+}
+function generateContainerOverflowRemediation(params) {
+  const {
+    childTagName,
+    childSelector,
+    childRect,
+    childStyles,
+    containerTagName,
+    containerSelector,
+    containerInnerBox,
+    overflowRightPx,
+    overflowBottomPx,
+    overflowLeftPx
+  } = params;
+  const childWidth = Math.round(childRect.width);
+  const containerInnerWidth = Math.round(containerInnerBox.width);
+  let culpritDescription = `Child <${childTagName}> (${childSelector}) of width ${childWidth}px exceeds container <${containerTagName}> (${containerSelector}) inner content boundary (${containerInnerWidth}px)`;
+  let suggestedFix = `Apply 'flex-wrap: wrap' on container or 'max-width: 100%' / 'min-width: 0' on children.`;
+  if (overflowRightPx > 0) {
+    culpritDescription += ` by ${Math.round(overflowRightPx)}px on the right`;
+  }
+  if (overflowLeftPx > 0) {
+    culpritDescription += ` by ${Math.round(overflowLeftPx)}px on the left`;
+  }
+  if (overflowBottomPx > 0) {
+    culpritDescription += ` and ${Math.round(overflowBottomPx)}px on the bottom`;
+  }
+  culpritDescription += ".";
+  if (childStyles.display === "flex" || childStyles.display === "inline-flex" || childStyles.flexWrap === "nowrap") {
+    culpritDescription += ` Multi-item flex row has 'flex-wrap: nowrap' forcing children past container edge.`;
+    suggestedFix = `Set 'flex-wrap: wrap' on flex parent or use responsive grid 'grid-template-columns: repeat(auto-fit, minmax(140px, 1fr))'.`;
+  } else if (childStyles.width && childStyles.width.includes("px") && parseFloat(childStyles.width) > containerInnerWidth) {
+    culpritDescription += ` Explicit fixed width of ${childStyles.width} exceeds container width (${containerInnerWidth}px).`;
+    suggestedFix = `Replace fixed width '${childStyles.width}' with 'width: 100%' / 'max-width: 100%' or responsive layout constraints.`;
+  } else if (childStyles.minWidth && childStyles.minWidth !== "auto" && parseFloat(childStyles.minWidth) > containerInnerWidth) {
+    culpritDescription += ` Fixed min-width '${childStyles.minWidth}' forces element outside parent boundary.`;
+    suggestedFix = `Set 'min-width: 0' or 'min-width: 100%' to allow responsive resizing within container.`;
+  } else if (["input", "select", "textarea", "table", "img", "canvas"].includes(childTagName.toLowerCase())) {
+    suggestedFix = `Ensure <${childTagName}> has 'max-width: 100%; box-sizing: border-box;' and flex children have 'min-width: 0;'.`;
+  }
+  return { culpritDescription, suggestedFix };
+}
+function evaluateContainerOverflow(params) {
+  const { child, container } = params;
+  if (isExemptFromContainerOverflow({
+    tagName: child.tagName,
+    className: child.className,
+    id: child.id,
+    role: child.role,
+    position: child.computedStyles.position,
+    isPopoverOrTooltip: child.isPopoverOrTooltip,
+    isCornerControl: child.isCornerControl,
+    isDecorative: child.isDecorative,
+    containerStyles: container.computedStyles
+  })) {
+    return null;
+  }
+  const overflow = calculateContainerOverflow(child.rect, container.innerBox);
+  if (!overflow.hasOverflow) {
+    return null;
+  }
+  const remediation = generateContainerOverflowRemediation({
+    childTagName: child.tagName,
+    childSelector: child.selector,
+    childRect: child.rect,
+    childStyles: child.computedStyles,
+    containerTagName: container.tagName,
+    containerSelector: container.selector,
+    containerInnerBox: container.innerBox,
+    overflowRightPx: overflow.overflowRightPx,
+    overflowBottomPx: overflow.overflowBottomPx,
+    overflowLeftPx: overflow.overflowLeftPx
+  });
+  const severity = overflow.overflowRightPx > 10 || overflow.overflowLeftPx > 10 || overflow.overflowBottomPx > 20 ? "critical" : "warning";
+  return {
+    selector: child.selector,
+    tagName: child.tagName,
+    id: child.id,
+    className: child.className,
+    boundingBox: child.rect,
+    containerSelector: container.selector,
+    containerTagName: container.tagName,
+    containerBoundingBox: container.rect,
+    containerInnerBox: container.innerBox,
+    overflowRightPx: overflow.overflowRightPx,
+    overflowBottomPx: overflow.overflowBottomPx,
+    overflowLeftPx: overflow.overflowLeftPx,
+    overflowTopPx: overflow.overflowTopPx,
+    computedStyles: child.computedStyles,
+    culpritDescription: remediation.culpritDescription,
+    suggestedFix: remediation.suggestedFix,
+    severity
+  };
+}
+
+// src/core/flexBlowout.ts
+function evaluateFlexBlowout(containerOverflows = [], elements = []) {
+  const issuesMap = /* @__PURE__ */ new Map();
+  const elementMap = /* @__PURE__ */ new Map();
+  for (const el of elements || []) {
+    elementMap.set(el.selector, el);
+  }
+  for (const co of containerOverflows || []) {
+    if (co.isExempt) continue;
+    const containerEl = elementMap.get(co.containerSelector);
+    const childEl = elementMap.get(co.childSelector);
+    const containerDisplay = (co.containerStyles?.display || containerEl?.computedStyles?.display || "").toLowerCase();
+    const isFlex = containerDisplay.includes("flex");
+    const isGrid = containerDisplay.includes("grid");
+    if (!isFlex && !isGrid) continue;
+    const childMinWidth = (co.childStyles?.minWidth || childEl?.computedStyles?.minWidth || "auto").trim();
+    const childFlexShrink = (co.childStyles?.flexShrink || childEl?.computedStyles?.flexShrink || "1").trim();
+    const isCleanMinWidth = childMinWidth === "0" || childMinWidth === "0px";
+    if (isCleanMinWidth && childFlexShrink !== "0") {
+      continue;
+    }
+    const layoutType = isGrid ? "grid" : "flex";
+    const childWidth = Math.round(
+      (co.childRect?.width || (childEl ? Math.max(childEl.rect.width, childEl.scrollWidth) : 0)) * 100
+    ) / 100;
+    const parentWidth = Math.round(
+      (co.containerInnerBox?.width || co.containerRect?.width || 0) * 100
+    ) / 100;
+    const overflowPx = Math.round(
+      Math.max(
+        co.overflowRightPx || 0,
+        co.overflowLeftPx || 0,
+        childWidth - parentWidth
+      ) * 100
+    ) / 100;
+    if (overflowPx <= 0) continue;
+    const isInteractive = Boolean(childEl?.isInteractive || co.isInteractive);
+    const severity = isInteractive || overflowPx > 20 ? "critical" : "serious";
+    issuesMap.set(co.childSelector, {
+      selector: co.childSelector,
+      tagName: co.childTagName || childEl?.tagName || "div",
+      parentSelector: co.containerSelector,
+      layoutType,
+      childWidth,
+      parentWidth,
+      overflowPx,
+      severity,
+      suggestion: `Child element ${co.childSelector} is blowing out ${layoutType} container ${co.containerSelector} by ${overflowPx}px because min-width: auto or flex-shrink: 0 prevents shrinking. Set min-width: 0 and overflow: hidden; text-overflow: ellipsis on the child.`
+    });
+  }
+  for (const child of elements || []) {
+    const parentSelector = child.ancestors?.[0];
+    if (!parentSelector) continue;
+    const parentEl = elementMap.get(parentSelector);
+    if (!parentEl) continue;
+    const parentDisplay = (parentEl.computedStyles?.display || "").toLowerCase();
+    const isFlex = parentDisplay.includes("flex");
+    const isGrid = parentDisplay.includes("grid");
+    if (!isFlex && !isGrid) continue;
+    const minWidth = (child.computedStyles?.minWidth || "auto").trim();
+    const flexShrink = (child.computedStyles?.flexShrink || "1").trim();
+    const isUnconstrained = minWidth === "auto" || flexShrink === "0";
+    if (!isUnconstrained) continue;
+    const hasScrollBlowout = child.scrollWidth > child.clientWidth + 2;
+    const parentWidth = Math.round((parentEl.clientWidth || parentEl.rect?.width || 0) * 100) / 100;
+    const childWidth = Math.round(Math.max(child.scrollWidth, child.rect?.width || 0) * 100) / 100;
+    const hasBoundaryBlowout = parentWidth > 0 && childWidth > parentWidth + 2;
+    if (!hasScrollBlowout && !hasBoundaryBlowout) continue;
+    const overflowPx = Math.round(
+      Math.max(
+        hasScrollBlowout ? child.scrollWidth - child.clientWidth : 0,
+        hasBoundaryBlowout ? childWidth - parentWidth : 0
+      ) * 100
+    ) / 100;
+    if (overflowPx <= 0) continue;
+    const layoutType = isGrid ? "grid" : "flex";
+    const severity = child.isInteractive || overflowPx > 20 ? "critical" : "serious";
+    const existing = issuesMap.get(child.selector);
+    if (!existing || overflowPx > existing.overflowPx) {
+      issuesMap.set(child.selector, {
+        selector: child.selector,
+        tagName: child.tagName,
+        parentSelector,
+        layoutType,
+        childWidth,
+        parentWidth,
+        overflowPx,
+        severity,
+        suggestion: `Child element ${child.selector} is blowing out ${layoutType} container ${parentSelector} by ${overflowPx}px because min-width: auto or flex-shrink: 0 prevents shrinking. Set min-width: 0 and overflow: hidden; text-overflow: ellipsis on the child.`
+      });
+    }
+  }
+  return Array.from(issuesMap.values());
+}
+
+// src/core/stickyOcclusion.ts
+function evaluateStickyOcclusion(data) {
+  if (!data || data.length === 0) {
+    return [];
+  }
+  return data.map((item) => {
+    const severity = item.isInteractive ? "critical" : "serious";
+    const positionLabel = item.positionType === "fixed" ? "Fixed" : "Sticky";
+    const interactiveLabel = item.isInteractive ? "interactive " : "";
+    const suggestion = `${positionLabel} element ${item.stickySelector} occludes ${interactiveLabel}${item.occludedTagName} ${item.occludedSelector} (${item.overlapRect.width}x${item.overlapRect.height}px overlap). Adjust z-index, add scroll-padding-top/bottom, or increase container padding.`;
+    const overlapRect = {
+      x: item.overlapRect.x,
+      y: item.overlapRect.y,
+      width: item.overlapRect.width,
+      height: item.overlapRect.height,
+      top: item.overlapRect.top,
+      right: item.overlapRect.right,
+      bottom: item.overlapRect.bottom,
+      left: item.overlapRect.left
+    };
+    return {
+      stickySelector: item.stickySelector,
+      stickyTagName: item.stickyTagName,
+      positionType: item.positionType,
+      occludedSelector: item.occludedSelector,
+      occludedTagName: item.occludedTagName,
+      isInteractive: item.isInteractive,
+      overlapRect,
+      severity,
+      suggestion
+    };
+  });
+}
+
+// src/core/textFlow.ts
+function generateTextFlowRemediation(anomaly) {
+  const {
+    selector,
+    tagName,
+    textSnippet,
+    anomalyType,
+    word,
+    orphanText,
+    lineCount,
+    elementWidth,
+    computedStyles
+  } = anomaly;
+  switch (anomalyType) {
+    case "mid-word-break": {
+      const brokenWord = word || textSnippet;
+      const details = `Word "${brokenWord}" in <${tagName}> (${selector}) is awkwardly broken across multiple lines without a hyphen due to 'word-break: break-all' or insufficient container width.`;
+      const suggestedFix = `Remove 'word-break: break-all' and use 'overflow-wrap: break-word' or 'hyphens: auto'. Ensure container has sufficient min-width (e.g., 'min-width: fit-content').`;
+      const severity = computedStyles?.wordBreak === "break-all" ? "critical" : "warning";
+      return { details, suggestedFix, severity };
+    }
+    case "broken-multiline-button": {
+      const details = `Interactive button <${tagName}> (${selector}) has text "${textSnippet}" that awkwardly wraps across ${lineCount || 2} lines (trailing: "${orphanText || ""}").`;
+      const suggestedFix = `Set 'white-space: nowrap' or increase button min-width / padding (e.g. min-w-fit, px-4) so the button label stays on a single line.`;
+      return { details, suggestedFix, severity: "critical" };
+    }
+    case "orphan-wrap": {
+      const details = `<${tagName}> (${selector}) text leaves a single orphan word ("${orphanText || ""}") on the last line.`;
+      const suggestedFix = `Apply 'text-wrap: balance' or 'text-wrap: pretty' to balance line lengths, or widen the container boundary.`;
+      return { details, suggestedFix, severity: "warning" };
+    }
+    case "crushed-flex-column": {
+      const width = elementWidth ? Math.round(elementWidth) : 0;
+      const details = `Flex column <${tagName}> (${selector}) is crushed to ${width}px width, causing text clipping or overflowing content in a multi-column row.`;
+      const suggestedFix = `Set 'flex: 1 1 0; min-width: 120px;' on flex items, or add 'flex-wrap: wrap' on the parent container.`;
+      return { details, suggestedFix, severity: "critical" };
+    }
+    default: {
+      return {
+        details: `Text flow anomaly detected in <${tagName}> (${selector}).`,
+        suggestedFix: `Check line wrapping and container constraints.`,
+        severity: "warning"
+      };
+    }
+  }
+}
+function evaluateTextFlow(anomaly) {
+  const remediation = generateTextFlowRemediation(anomaly);
+  return {
+    selector: anomaly.selector,
+    tagName: anomaly.tagName,
+    textSnippet: anomaly.textSnippet,
+    anomalyType: anomaly.anomalyType,
+    details: remediation.details,
+    lineCount: anomaly.lineCount,
+    lastLineWordCount: anomaly.lastLineWordCount,
+    orphanText: anomaly.orphanText,
+    computedStyles: anomaly.computedStyles,
+    severity: remediation.severity,
+    suggestedFix: remediation.suggestedFix
+  };
+}
+
+// src/core/viewportFit.ts
+function evaluateViewportFit(metaContent, viewport) {
+  const issues = [];
+  const suggestions = [];
+  let isValidMetaViewport = false;
+  let allowsUserZoom = true;
+  let isWidthDeviceWidth = false;
+  let initialScale = 1;
+  let isMobileOptimized = false;
+  if (metaContent) {
+    isValidMetaViewport = true;
+    const parts = metaContent.toLowerCase().split(",").map((s) => s.trim());
+    for (const part of parts) {
+      if (part.includes("width=device-width")) {
+        isWidthDeviceWidth = true;
+      }
+      if (part.includes("user-scalable=no") || part.includes("user-scalable=0")) {
+        allowsUserZoom = false;
+        issues.push("Viewport meta tag explicitly disables user pinch-to-zoom (user-scalable=no/0), violating WCAG 1.4.4 resize standard.");
+        suggestions.push('Remove "user-scalable=no" and allow users to zoom content freely.');
+      }
+      if (part.includes("maximum-scale=1") || part.includes("maximum-scale=1.0")) {
+        allowsUserZoom = false;
+        issues.push("Viewport meta tag restricts maximum zoom scale to 1.0 (maximum-scale=1), preventing users from zooming.");
+        suggestions.push("Set maximum-scale to 5.0 or remove maximum-scale constraint.");
+      }
+      if (part.startsWith("initial-scale=")) {
+        const val = parseFloat(part.replace("initial-scale=", ""));
+        if (!isNaN(val)) initialScale = val;
+      }
+    }
+    if (isWidthDeviceWidth && initialScale >= 0.9 && initialScale <= 1.1) {
+      isMobileOptimized = true;
+    }
+  } else {
+    issues.push('Missing <meta name="viewport"> tag. Mobile browsers will render page in desktop emulation mode (980px viewport).');
+    suggestions.push('Add <meta name="viewport" content="width=device-width, initial-scale=1.0"> to your HTML <head>.');
+  }
+  const pageScrollWidth = viewport.scrollWidth;
+  const windowWidth = viewport.width;
+  const horizontalOverflowRatio = Math.round(pageScrollWidth / windowWidth * 1e3) / 1e3;
+  const contentBleeds = horizontalOverflowRatio > 1.01;
+  if (contentBleeds) {
+    const bleedPx = Math.round(pageScrollWidth - windowWidth);
+    issues.push(`Page content width (${pageScrollWidth}px) exceeds viewport width (${windowWidth}px) by ${bleedPx}px, causing unwanted horizontal scroll.`);
+    suggestions.push(`Inspect overflowing child elements, ensure max-w-full and overflow-x: hidden/clip on page body.`);
+  }
+  return {
+    isValidMetaViewport,
+    metaContent,
+    allowsUserZoom,
+    isWidthDeviceWidth,
+    initialScale,
+    isMobileOptimized,
+    pageScrollWidth,
+    windowWidth,
+    horizontalOverflowRatio,
+    contentBleeds,
+    issues,
+    suggestions
+  };
+}
+
+// src/core/touchTargets.ts
+function evaluateTouchTarget(target, adjacentTargets, options) {
+  const standard = options?.standard ?? "WCAG_AA";
+  const minTargetSize = options?.minTargetSize ?? (standard === "WCAG_AAA" ? 44 : standard === "MOBILE_RECOMMENDED" ? 48 : 24);
+  const width = Math.round(target.boundingBox.width * 100) / 100;
+  const height = Math.round(target.boundingBox.height * 100) / 100;
+  if (width <= 0 || height <= 0) return null;
+  const failsWidth = width < minTargetSize;
+  const failsHeight = height < minTargetSize;
+  if (!failsWidth && !failsHeight) {
+    return null;
+  }
+  const spacingIssues = [];
+  if (adjacentTargets && adjacentTargets.length > 0) {
+    const centerA = {
+      x: target.boundingBox.x + target.boundingBox.width / 2,
+      y: target.boundingBox.y + target.boundingBox.height / 2
+    };
+    for (const adj of adjacentTargets) {
+      if (adj.selector === target.selector) continue;
+      const centerB = {
+        x: adj.boundingBox.x + adj.boundingBox.width / 2,
+        y: adj.boundingBox.y + adj.boundingBox.height / 2
+      };
+      const centerDist = Math.hypot(centerA.x - centerB.x, centerA.y - centerB.y);
+      const edgeDist = centerDist - (Math.max(width, height) / 2 + Math.max(adj.boundingBox.width, adj.boundingBox.height) / 2);
+      if (edgeDist < 8 && centerDist < minTargetSize) {
+        spacingIssues.push({
+          adjacentSelector: adj.selector,
+          distancePx: Math.max(0, Math.round(edgeDist))
+        });
+      }
+    }
+  }
+  const severity = width < 20 || height < 20 || spacingIssues.length > 0 ? "critical" : "warning";
+  let suggestion = `Increase interactive target size to at least ${minTargetSize}x${minTargetSize}px (currently ${Math.round(width)}x${Math.round(height)}px) using padding (e.g. 'p-2' or 'p-3') or min-h-[${minTargetSize}px] min-w-[${minTargetSize}px].`;
+  if (spacingIssues.length > 0) {
+    suggestion += ` Add spacing/gap between this element and adjacent interactive target (${spacingIssues[0].adjacentSelector}) to prevent mis-taps.`;
+  }
+  return {
+    selector: target.selector,
+    tagName: target.tagName,
+    id: target.id,
+    className: target.className,
+    text: target.text,
+    boundingBox: target.boundingBox,
+    width,
+    height,
+    standard,
+    minRequiredSize: minTargetSize,
+    severity,
+    spacingIssues: spacingIssues.length > 0 ? spacingIssues : void 0,
+    suggestion
+  };
+}
+
+// src/core/readability.ts
+function evaluateTextReadability(element, isMobile, minFontSizePx = 12) {
+  const isIllegibleOnMobile = isMobile && element.fontSizePx < minFontSizePx;
+  const isTruncated = element.scrollWidth > element.clientWidth + 2 && (element.overflow === "hidden" || element.textOverflow === "ellipsis");
+  const hasAccessibleTooltip = !!element.hasAccessibleTooltip;
+  if (!isIllegibleOnMobile && !isTruncated) {
+    return null;
+  }
+  if (isTruncated && hasAccessibleTooltip && !isIllegibleOnMobile) {
+    return null;
+  }
+  const severity = isIllegibleOnMobile && element.fontSizePx < 10 ? "warning" : "info";
+  let suggestion = "";
+  if (isIllegibleOnMobile && isTruncated) {
+    suggestion = `Font size (${Math.round(element.fontSizePx)}px) is too small on mobile (< ${minFontSizePx}px) and text is truncated (${element.scrollWidth}px > ${element.clientWidth}px). Increase font-size to text-xs/text-sm and provide adequate width or wrapping.`;
+  } else if (isIllegibleOnMobile) {
+    suggestion = `Font size (${Math.round(element.fontSizePx)}px) is below mobile readability threshold (${minFontSizePx}px). Increase to at least 12px (text-xs/text-sm).`;
+  } else if (isTruncated) {
+    suggestion = `Text is overflowing and clipped/truncated without full expansion. Consider adding title/tooltip attribute or flexible wrapping.`;
+  }
+  return {
+    selector: element.selector,
+    textSnippet: element.text.length > 50 ? element.text.substring(0, 47) + "..." : element.text,
+    fontSizePx: Math.round(element.fontSizePx * 10) / 10,
+    lineHeightPx: element.lineHeightPx ? Math.round(element.lineHeightPx * 10) / 10 : void 0,
+    isTruncated,
+    isIllegibleOnMobile,
+    hasAccessibleTooltip,
+    severity,
+    suggestion
+  };
+}
+
+// src/core/contrast.ts
+function parseColor(colorStr) {
+  if (!colorStr || colorStr === "transparent") {
+    return { r: 0, g: 0, b: 0, a: 0 };
+  }
+  const rgbMatch = colorStr.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+  if (rgbMatch) {
+    return {
+      r: parseInt(rgbMatch[1], 10),
+      g: parseInt(rgbMatch[2], 10),
+      b: parseInt(rgbMatch[3], 10),
+      a: rgbMatch[4] !== void 0 ? parseFloat(rgbMatch[4]) : 1
+    };
+  }
+  if (colorStr.startsWith("#")) {
+    const hex = colorStr.slice(1);
+    if (hex.length === 3) {
+      return {
+        r: parseInt(hex[0] + hex[0], 16),
+        g: parseInt(hex[1] + hex[1], 16),
+        b: parseInt(hex[2] + hex[2], 16),
+        a: 1
+      };
+    }
+    if (hex.length === 6) {
+      return {
+        r: parseInt(hex.slice(0, 2), 16),
+        g: parseInt(hex.slice(2, 4), 16),
+        b: parseInt(hex.slice(4, 6), 16),
+        a: 1
+      };
+    }
+    if (hex.length === 8) {
+      return {
+        r: parseInt(hex.slice(0, 2), 16),
+        g: parseInt(hex.slice(2, 4), 16),
+        b: parseInt(hex.slice(4, 6), 16),
+        a: parseInt(hex.slice(6, 8), 16) / 255
+      };
+    }
+  }
+  return null;
+}
+function getRelativeLuminance(rgba) {
+  const [rs, gs, bs] = [rgba.r / 255, rgba.g / 255, rgba.b / 255].map((val) => {
+    return val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+}
+function getContrastRatio(fgColorStr, bgColorStr) {
+  const fg = parseColor(fgColorStr);
+  const bg = parseColor(bgColorStr) || { r: 255, g: 255, b: 255};
+  if (!fg) return 21;
+  const effectiveFg = fg.a < 1 ? {
+    r: Math.round(fg.r * fg.a + bg.r * (1 - fg.a)),
+    g: Math.round(fg.g * fg.a + bg.g * (1 - fg.a)),
+    b: Math.round(fg.b * fg.a + bg.b * (1 - fg.a))} : fg;
+  const l1 = getRelativeLuminance(effectiveFg);
+  const l2 = getRelativeLuminance(bg);
+  const lighter = Math.max(l1, l2);
+  const darker = Math.min(l1, l2);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+function evaluateColorContrast(element, options) {
+  if (!element.textSnippet || element.textSnippet.trim().length === 0) {
+    return null;
+  }
+  const isBold = parseInt(element.fontWeight, 10) >= 700 || element.fontWeight === "bold";
+  const isLargeText = element.fontSizePx >= 24 || element.fontSizePx >= 18.66 && isBold;
+  const defaultRequiredRatio = isLargeText ? 3 : 4.5;
+  const requiredRatio = options?.minRatio !== void 0 ? options.minRatio : defaultRequiredRatio;
+  const ratio = Math.round(getContrastRatio(element.color, element.backgroundColor) * 100) / 100;
+  if (ratio >= requiredRatio) {
+    return null;
+  }
+  const severity = ratio < 3 ? "critical" : "warning";
+  const suggestion = `Text contrast ratio is ${ratio}:1 (${element.color} on ${element.backgroundColor}), which fails WCAG AA requirement of ${requiredRatio}:1 for ${isLargeText ? "large" : "normal"} text. Adjust text or background color to improve contrast.`;
+  return {
+    selector: element.selector,
+    tagName: element.tagName,
+    textSnippet: element.textSnippet.length > 50 ? element.textSnippet.substring(0, 47) + "..." : element.textSnippet,
+    foregroundColor: element.color,
+    backgroundColor: element.backgroundColor,
+    contrastRatio: ratio,
+    requiredRatio,
+    fontSizePx: element.fontSizePx,
+    isBold,
+    severity,
+    suggestion
+  };
+}
+
+// src/core/occlusion.ts
+function evaluateElementOcclusion(target, raycastResults) {
+  if (!target.isInteractive || raycastResults.length === 0) {
+    return null;
+  }
+  const occludedPoints = raycastResults.filter((r) => !r.isTargetOrDescendant);
+  if (occludedPoints.length === 0) {
+    return null;
+  }
+  const occludedAreaRatio = Math.round(occludedPoints.length / raycastResults.length * 100) / 100;
+  const primaryOccluder = occludedPoints[0];
+  const severity = occludedAreaRatio >= 0.5 ? "critical" : "warning";
+  const suggestion = `Element <${target.tagName}> (${target.selector}) has ${Math.round(occludedAreaRatio * 100)}% of its interactive click area occluded by <${primaryOccluder.topTagName}> (${primaryOccluder.topSelector}). Check z-index, fixed/sticky navigation overlays, or pointer-events: none.`;
+  return {
+    selector: target.selector,
+    tagName: target.tagName,
+    boundingBox: target.boundingBox,
+    occludedBySelector: primaryOccluder.topSelector,
+    occludedByTagName: primaryOccluder.topTagName,
+    occludedPointsCount: occludedPoints.length,
+    totalPointsChecked: raycastResults.length,
+    occludedAreaRatio,
+    isInteractive: target.isInteractive,
+    severity,
+    suggestion
+  };
+}
+
+// src/core/scrollTraps.ts
+function evaluateScrollTrap(container, viewport) {
+  const hasVerticalScroll = (container.overflowY === "auto" || container.overflowY === "scroll") && container.scrollHeight > container.clientHeight + 5;
+  const hasHorizontalScroll = (container.overflowX === "auto" || container.overflowX === "scroll") && container.scrollWidth > container.clientWidth + 5;
+  if (!hasVerticalScroll && !hasHorizontalScroll) {
+    return null;
+  }
+  const viewportRatio = Math.round(container.clientHeight / viewport.height * 100) / 100;
+  const isTrapRisk = viewportRatio >= 0.65 && hasVerticalScroll;
+  if (!isTrapRisk && container.clientHeight < 120 && hasVerticalScroll) {
+    return {
+      selector: container.selector,
+      tagName: container.tagName,
+      scrollHeight: container.scrollHeight,
+      clientHeight: container.clientHeight,
+      scrollWidth: container.scrollWidth,
+      clientWidth: container.clientWidth,
+      viewportRatio,
+      isTrapRisk: false,
+      severity: "warning",
+      suggestion: `Nested scroll container (${container.selector}) has very small height (${container.clientHeight}px) causing awkward scrolling. Consider increasing height or using pagination.`
+    };
+  }
+  if (!isTrapRisk) {
+    return null;
+  }
+  return {
+    selector: container.selector,
+    tagName: container.tagName,
+    scrollHeight: container.scrollHeight,
+    clientHeight: container.clientHeight,
+    scrollWidth: container.scrollWidth,
+    clientWidth: container.clientWidth,
+    viewportRatio,
+    isTrapRisk: true,
+    severity: "critical",
+    suggestion: `Nested scroll container (${container.selector}) occupies ${Math.round(viewportRatio * 100)}% of the viewport and traps mobile touch-scroll. Add 'overscroll-behavior: contain' and provide visible scroll affordance/padding so users can scroll the outer page.`
+  };
+}
+
+// src/playwright/auditEvaluator.ts
+function evaluateAuditIssues(inPageData, mergedOptions, viewport, isMobile) {
+  const viewportFit = evaluateViewportFit(viewport.metaViewport, viewport);
+  const overflowIssues = [];
+  if (mergedOptions.checkOverflow !== false) {
+    for (const el of inPageData.elements) {
+      const over = calculateOverflow(el.rect, viewport);
+      if (over.hasOverflow) {
+        const remediation = generateOverflowRemediation({
+          tagName: el.tagName,
+          selector: el.selector,
+          styles: el.computedStyles,
+          boundingBox: el.rect,
+          viewport,
+          overflowRightPx: over.overflowRightPx
+        });
+        overflowIssues.push({
+          selector: el.selector,
+          tagName: el.tagName,
+          boundingBox: el.rect,
+          viewport,
+          overflowRightPx: over.overflowRightPx,
+          overflowBottomPx: over.overflowBottomPx,
+          overflowLeftPx: over.overflowLeftPx,
+          computedStyles: el.computedStyles,
+          culpritDescription: remediation.culpritDescription || remediation.description,
+          suggestedFix: remediation.suggestedFix || remediation.cssSuggestion,
+          severity: remediation.severity || (over.overflowRightPx > 50 ? "critical" : "warning")
+        });
+      }
+    }
+  }
+  const containerOverflowIssues = [];
+  if (mergedOptions.checkContainerOverflow !== false && inPageData.containerOverflows) {
+    for (const cov of inPageData.containerOverflows) {
+      if (cov.isExempt) continue;
+      const issue = evaluateContainerOverflow({
+        child: {
+          selector: cov.childSelector,
+          tagName: cov.childTagName,
+          id: cov.childId,
+          className: cov.childClassName,
+          rect: cov.childRect,
+          computedStyles: cov.childStyles,
+          role: cov.childRole
+        },
+        container: {
+          selector: cov.containerSelector,
+          tagName: cov.containerTagName,
+          rect: cov.containerRect,
+          innerBox: cov.containerInnerBox,
+          computedStyles: cov.containerStyles
+        }
+      });
+      if (issue) containerOverflowIssues.push(issue);
+    }
+  }
+  let flexBlowoutIssues = [];
+  if (mergedOptions.checkFlexBlowout !== false) {
+    flexBlowoutIssues = evaluateFlexBlowout(inPageData.containerOverflows || [], inPageData.elements);
+  }
+  let stickyOcclusionIssues = [];
+  if (mergedOptions.checkStickyOcclusion !== false && inPageData.stickyOcclusions) {
+    stickyOcclusionIssues = evaluateStickyOcclusion(inPageData.stickyOcclusions);
+  }
+  const textFlowIssues = [];
+  if (mergedOptions.checkTextFlow !== false && inPageData.textFlowAnomalies) {
+    for (const anomaly of inPageData.textFlowAnomalies) {
+      const issue = evaluateTextFlow(anomaly);
+      if (issue) textFlowIssues.push(issue);
+    }
+  }
+  const touchTargetIssues = [];
+  const interactiveElements = inPageData.elements.filter((e) => e.isInteractive);
+  if (mergedOptions.checkTouchTargets !== false) {
+    const allTargets = interactiveElements.map((e) => ({ selector: e.selector, boundingBox: e.rect }));
+    for (const el of interactiveElements) {
+      const issue = evaluateTouchTarget(
+        {
+          selector: el.selector,
+          tagName: el.tagName,
+          id: el.id,
+          className: el.className,
+          text: el.textSnippet,
+          boundingBox: el.rect
+        },
+        allTargets,
+        { minTargetSize: mergedOptions.minTouchTargetSize }
+      );
+      if (issue) touchTargetIssues.push(issue);
+    }
+  }
+  const readabilityIssues = [];
+  if (mergedOptions.checkReadability !== false) {
+    for (const el of inPageData.elements) {
+      if (!el.textSnippet || el.textSnippet.length === 0) continue;
+      const fontSizePx = parseFloat(el.computedStyles.fontSize) || 16;
+      const lineHeightPx = parseFloat(el.computedStyles.lineHeight) || void 0;
+      const issue = evaluateTextReadability(
+        {
+          selector: el.selector,
+          text: el.textSnippet,
+          fontSizePx,
+          lineHeightPx,
+          scrollWidth: el.scrollWidth,
+          clientWidth: el.clientWidth,
+          textOverflow: el.computedStyles.overflow,
+          overflow: el.computedStyles.overflow
+        },
+        isMobile,
+        mergedOptions.minFontSizePx
+      );
+      if (issue) readabilityIssues.push(issue);
+    }
+  }
+  const contrastIssues = [];
+  if (mergedOptions.checkContrast !== false) {
+    for (const el of inPageData.elements) {
+      if (el.textSnippet && el.computedStyles.color && el.computedStyles.backgroundColor) {
+        const issue = evaluateColorContrast(
+          {
+            selector: el.selector,
+            tagName: el.tagName,
+            textSnippet: el.textSnippet,
+            color: el.computedStyles.color || "#000000",
+            backgroundColor: el.computedStyles.backgroundColor || "#ffffff",
+            fontSizePx: parseFloat(el.computedStyles.fontSize) || 16,
+            fontWeight: el.computedStyles.fontWeight || "400"
+          },
+          { minRatio: mergedOptions.minContrastRatio || 4.5 }
+        );
+        if (issue) contrastIssues.push(issue);
+      }
+    }
+  }
+  const occlusionIssues = [];
+  if (mergedOptions.checkOcclusion !== false && inPageData.occlusions) {
+    for (const occ of inPageData.occlusions) {
+      const issue = evaluateElementOcclusion(
+        {
+          selector: occ.selector,
+          tagName: occ.tagName,
+          boundingBox: occ.boundingBox,
+          isInteractive: true
+        },
+        occ.raycastResults
+      );
+      if (issue) occlusionIssues.push(issue);
+    }
+  }
+  let collisionIssues = [];
+  if (mergedOptions.checkCollisions !== false) {
+    collisionIssues = evaluateElementCollisions(
+      inPageData.elements.map((e) => ({
+        selector: e.selector,
+        tagName: e.tagName,
+        textSnippet: e.textSnippet,
+        rect: e.rect,
+        isInteractive: e.isInteractive,
+        isTextOnly: e.isTextOnly,
+        ancestors: e.ancestors
+      }))
+    );
+  }
+  const scrollTrapIssues = [];
+  if (mergedOptions.checkScrollTraps !== false) {
+    for (const el of inPageData.elements) {
+      const issue = evaluateScrollTrap(
+        {
+          selector: el.selector,
+          tagName: el.tagName,
+          scrollHeight: el.scrollHeight,
+          clientHeight: el.clientHeight,
+          scrollWidth: el.scrollWidth,
+          clientWidth: el.clientWidth,
+          overflowX: el.computedStyles.overflowX,
+          overflowY: el.computedStyles.overflowY
+        },
+        viewport
+      );
+      if (issue) scrollTrapIssues.push(issue);
+    }
+  }
+  const accessibleNameIssues = [];
+  if (mergedOptions.checkAccessibleNames !== false) {
+    for (const el of inPageData.elements) {
+      if (el.isInteractive) {
+        const issue = evaluateAccessibleName({
+          selector: el.selector,
+          tagName: el.tagName,
+          role: el.role,
+          ariaLabel: el.ariaLabel,
+          ariaLabelledBy: el.ariaLabelledBy,
+          title: el.title,
+          innerText: el.textSnippet,
+          hasSvgOrImgChild: el.hasSvgOrImgChild
+        });
+        if (issue) accessibleNameIssues.push(issue);
+      }
+    }
+  }
+  return {
+    viewportFit,
+    overflowIssues,
+    containerOverflowIssues,
+    flexBlowoutIssues,
+    stickyOcclusionIssues,
+    textFlowIssues,
+    touchTargetIssues,
+    readabilityIssues,
+    contrastIssues,
+    occlusionIssues,
+    collisionIssues,
+    scrollTrapIssues,
+    accessibleNameIssues
+  };
+}
 var LayoutInspector = class {
   page;
   defaultOptions;
@@ -2068,10 +2537,12 @@ var LayoutInspector = class {
       checkTouchTargets: true,
       checkOverflow: true,
       checkContainerOverflow: true,
+      checkFlexBlowout: true,
       checkTextFlow: true,
       checkReadability: true,
       checkContrast: true,
       checkOcclusion: true,
+      checkStickyOcclusion: true,
       checkCollisions: true,
       checkScrollTraps: true,
       checkAccessibleNames: true,
@@ -2090,237 +2561,23 @@ var LayoutInspector = class {
     const viewport = inPageData.viewport;
     const url = this.page.url();
     const isMobile = viewport.width < 768;
-    const viewportFit = evaluateViewportFit(viewport.metaViewport, viewport);
-    const overflowIssues = [];
-    if (mergedOptions.checkOverflow !== false) {
-      for (const el of inPageData.elements) {
-        const over = calculateOverflow(el.rect, viewport);
-        if (over.hasOverflow) {
-          const remediation = generateOverflowRemediation({
-            tagName: el.tagName,
-            selector: el.selector,
-            boundingBox: el.rect,
-            viewport,
-            styles: el.computedStyles,
-            overflowRightPx: over.overflowRightPx
-          });
-          overflowIssues.push({
-            selector: el.selector,
-            tagName: el.tagName,
-            id: el.id,
-            className: el.className,
-            boundingBox: el.rect,
-            viewport,
-            overflowRightPx: over.overflowRightPx,
-            overflowBottomPx: over.overflowBottomPx,
-            overflowLeftPx: over.overflowLeftPx,
-            computedStyles: el.computedStyles,
-            culpritDescription: remediation.culpritDescription,
-            suggestedFix: remediation.suggestedFix,
-            severity: over.overflowRightPx > 10 ? "critical" : "warning"
-          });
-        }
-      }
-    }
-    const containerOverflowIssues = [];
-    if (mergedOptions.checkContainerOverflow !== false && inPageData.containerOverflows) {
-      for (const cov of inPageData.containerOverflows) {
-        if (cov.isExempt) continue;
-        const issue = evaluateContainerOverflow({
-          child: {
-            selector: cov.childSelector,
-            tagName: cov.childTagName,
-            id: cov.childId,
-            className: cov.childClassName,
-            rect: cov.childRect,
-            computedStyles: cov.childStyles,
-            role: cov.childRole
-          },
-          container: {
-            selector: cov.containerSelector,
-            tagName: cov.containerTagName,
-            rect: cov.containerRect,
-            innerBox: cov.containerInnerBox,
-            computedStyles: cov.containerStyles
-          }
-        });
-        if (issue) {
-          containerOverflowIssues.push(issue);
-        }
-      }
-    }
-    const touchTargetIssues = [];
-    const interactiveElements = inPageData.elements.filter((e) => e.isInteractive);
-    if (mergedOptions.checkTouchTargets !== false) {
-      const allTargets = interactiveElements.map((e) => ({ selector: e.selector, boundingBox: e.rect }));
-      for (const el of interactiveElements) {
-        const issue = evaluateTouchTarget(
-          {
-            selector: el.selector,
-            tagName: el.tagName,
-            id: el.id,
-            className: el.className,
-            text: el.textSnippet,
-            boundingBox: el.rect
-          },
-          allTargets,
-          { minTargetSize: mergedOptions.minTouchTargetSize }
-        );
-        if (issue) {
-          touchTargetIssues.push(issue);
-        }
-      }
-    }
-    const readabilityIssues = [];
-    if (mergedOptions.checkReadability !== false) {
-      for (const el of inPageData.elements) {
-        if (!el.textSnippet || el.textSnippet.length === 0) continue;
-        const fontSizePx = parseFloat(el.computedStyles.fontSize) || 16;
-        const lineHeightPx = parseFloat(el.computedStyles.lineHeight) || void 0;
-        const issue = evaluateTextReadability(
-          {
-            selector: el.selector,
-            text: el.textSnippet,
-            fontSizePx,
-            lineHeightPx,
-            scrollWidth: el.scrollWidth,
-            clientWidth: el.clientWidth,
-            textOverflow: el.computedStyles.overflow,
-            overflow: el.computedStyles.overflow
-          },
-          isMobile,
-          mergedOptions.minFontSizePx
-        );
-        if (issue) {
-          readabilityIssues.push(issue);
-        }
-      }
-    }
-    const textFlowIssues = [];
-    if (mergedOptions.checkTextFlow !== false && inPageData.textFlowAnomalies) {
-      for (const anomaly of inPageData.textFlowAnomalies) {
-        const issue = evaluateTextFlow(anomaly);
-        if (issue) {
-          textFlowIssues.push(issue);
-        }
-      }
-    }
-    const contrastIssues = [];
-    if (mergedOptions.checkContrast !== false) {
-      for (const el of inPageData.elements) {
-        if (!el.hasDirectText) continue;
-        if (!el.textSnippet || el.textSnippet.trim().length === 0) continue;
-        const fontSizePx = parseFloat(el.computedStyles.fontSize) || 16;
-        const color = el.computedStyles.color || "rgb(0, 0, 0)";
-        const backgroundColor = el.computedStyles.backgroundColor || "rgb(255, 255, 255)";
-        const fontWeight = el.computedStyles.fontWeight || "400";
-        const issue = evaluateColorContrast(
-          {
-            selector: el.selector,
-            tagName: el.tagName,
-            textSnippet: el.textSnippet,
-            color,
-            backgroundColor,
-            fontSizePx,
-            fontWeight
-          },
-          { minRatio: mergedOptions.minContrastRatio }
-        );
-        if (issue) {
-          contrastIssues.push(issue);
-        }
-      }
-    }
-    const occlusionIssues = [];
-    if (mergedOptions.checkOcclusion !== false) {
-      for (const occ of inPageData.occlusions) {
-        const target = inPageData.elements.find((e) => e.selector === occ.selector);
-        if (target) {
-          const issue = evaluateElementOcclusion(
-            {
-              selector: target.selector,
-              tagName: target.tagName,
-              boundingBox: target.rect,
-              isInteractive: target.isInteractive
-            },
-            occ.raycastResults
-          );
-          if (issue) {
-            occlusionIssues.push(issue);
-          }
-        }
-      }
-    }
-    let collisionIssues = [];
-    if (mergedOptions.checkCollisions !== false) {
-      collisionIssues = evaluateElementCollisions(
-        inPageData.elements.map((e) => ({
-          selector: e.selector,
-          tagName: e.tagName,
-          textSnippet: e.textSnippet,
-          rect: e.rect,
-          isInteractive: e.isInteractive,
-          isTextOnly: e.isTextOnly,
-          ancestors: e.ancestors
-        }))
-      );
-    }
-    const scrollTrapIssues = [];
-    if (mergedOptions.checkScrollTraps !== false) {
-      for (const el of inPageData.elements) {
-        const trap = evaluateScrollTrap(
-          {
-            selector: el.selector,
-            tagName: el.tagName,
-            scrollHeight: el.scrollHeight,
-            clientHeight: el.clientHeight,
-            scrollWidth: el.scrollWidth,
-            clientWidth: el.clientWidth,
-            overflowY: el.computedStyles.overflowY,
-            overflowX: el.computedStyles.overflowX
-          },
-          viewport
-        );
-        if (trap) {
-          scrollTrapIssues.push(trap);
-        }
-      }
-    }
-    const accessibleNameIssues = [];
-    if (mergedOptions.checkAccessibleNames !== false) {
-      for (const el of inPageData.elements) {
-        const issue = evaluateAccessibleName({
-          selector: el.selector,
-          tagName: el.tagName,
-          role: el.role,
-          ariaLabel: el.ariaLabel,
-          ariaLabelledBy: el.ariaLabelledBy,
-          title: el.title,
-          innerText: el.textSnippet,
-          hasSvgOrImgChild: el.hasSvgOrImgChild
-        });
-        if (issue) {
-          accessibleNameIssues.push(issue);
-        }
-      }
-    }
+    const issues = evaluateAuditIssues(inPageData, mergedOptions, viewport, isMobile);
     const focusIndicatorIssues = [];
     if (mergedOptions.checkFocusIndicators !== false) {
-      for (const el of interactiveElements) {
-        const focusData = await this.page.evaluate((selector) => {
-          const el2 = document.querySelector(selector);
-          if (!el2) return null;
-          el2.focus({ preventScroll: true });
-          const comp = window.getComputedStyle(el2);
-          const result = {
+      const candidates = inPageData.elements.filter((e) => e.isInteractive).slice(0, 5);
+      for (const el of candidates) {
+        const focusData = await this.page.evaluate((sel) => {
+          const target = document.querySelector(sel);
+          if (!target || typeof target.focus !== "function") return null;
+          target.focus();
+          const comp = window.getComputedStyle(target);
+          return {
             outlineWidth: comp.outlineWidth,
             outlineStyle: comp.outlineStyle,
             outlineColor: comp.outlineColor,
             boxShadow: comp.boxShadow
           };
-          el2.blur();
-          return result;
-        }, el.selector);
+        }, el.selector).catch(() => null);
         if (!focusData) continue;
         const issue = evaluateFocusIndicator({
           selector: el.selector,
@@ -2329,13 +2586,12 @@ var LayoutInspector = class {
           outlineStyle: focusData.outlineStyle || "none",
           outlineColor: focusData.outlineColor || "transparent",
           boxShadow: focusData.boxShadow || "none"});
-        if (issue) {
-          focusIndicatorIssues.push(issue);
-        }
+        if (issue) focusIndicatorIssues.push(issue);
       }
     }
     let thumbZoneAnalysis;
     if (mergedOptions.checkThumbZones !== false) {
+      const interactiveElements = inPageData.elements.filter((e) => e.isInteractive);
       thumbZoneAnalysis = evaluateThumbZoneErgonomics(
         interactiveElements.map((e) => ({
           selector: e.selector,
@@ -2349,26 +2605,9 @@ var LayoutInspector = class {
     if (mergedOptions.test200PercentZoomReflow) {
       zoomReflowResult = await this.test200PercentZoomReflow();
     }
-    let screenshotBase64;
-    if (mergedOptions.includeScreenshot) {
-      try {
-        const buffer = await this.page.screenshot({ fullPage: false });
-        screenshotBase64 = buffer.toString("base64");
-      } catch {
-      }
-    }
+    const { screenshotBase64 } = await captureAndAnnotateScreenshot(this.page, mergedOptions);
     const uxScore = computeUXScore({
-      overflowIssues,
-      containerOverflowIssues,
-      textFlowIssues,
-      viewportFit,
-      touchTargetIssues,
-      readabilityIssues,
-      contrastIssues,
-      occlusionIssues,
-      collisionIssues,
-      scrollTrapIssues,
-      accessibleNameIssues,
+      ...issues,
       focusIndicatorIssues,
       thumbZoneAnalysis
     });
@@ -2382,23 +2621,19 @@ var LayoutInspector = class {
       device: devicePreset,
       viewport,
       uxScore,
-      overflowIssues,
-      containerOverflowIssues,
-      textFlowIssues,
-      touchTargetIssues,
-      viewportFit,
-      readabilityIssues,
-      contrastIssues,
-      occlusionIssues,
-      collisionIssues,
-      scrollTrapIssues,
-      accessibleNameIssues,
+      ...issues,
       focusIndicatorIssues,
       thumbZoneAnalysis,
       zoomReflowResult,
       screenshotBase64,
       executionTimeMs: Date.now() - startTime
     };
+  }
+  /**
+   * Run multi-device responsive matrix audit across mobile, tablet, and desktop viewports.
+   */
+  async auditMatrix(options = {}) {
+    return runResponsiveMatrixAudit(this.page, this, options);
   }
   /**
    * Test WCAG 1.4.10 Reflow at 200% zoom.

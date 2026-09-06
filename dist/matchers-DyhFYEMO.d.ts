@@ -206,6 +206,28 @@ interface OcclusionIssue {
     severity: 'critical' | 'warning';
     suggestion: string;
 }
+interface StickyOcclusionIssue {
+    stickySelector: string;
+    stickyTagName: string;
+    positionType: 'fixed' | 'sticky';
+    occludedSelector: string;
+    occludedTagName: string;
+    isInteractive: boolean;
+    overlapRect: BoundingBox;
+    severity: 'critical' | 'serious' | 'minor';
+    suggestion: string;
+}
+interface FlexBlowoutIssue {
+    selector: string;
+    tagName: string;
+    parentSelector: string;
+    layoutType: 'flex' | 'grid';
+    childWidth: number;
+    parentWidth: number;
+    overflowPx: number;
+    severity: 'critical' | 'serious';
+    suggestion: string;
+}
 interface ElementCollisionIssue {
     selectorA: string;
     selectorB: string;
@@ -322,6 +344,7 @@ interface LayoutAuditOptions {
     minTouchTargetSize?: number;
     checkOverflow?: boolean;
     checkContainerOverflow?: boolean;
+    checkFlexBlowout?: boolean;
     checkTextFlow?: boolean;
     checkViewportFit?: boolean;
     checkReadability?: boolean;
@@ -329,6 +352,7 @@ interface LayoutAuditOptions {
     checkContrast?: boolean;
     minContrastRatio?: number;
     checkOcclusion?: boolean;
+    checkStickyOcclusion?: boolean;
     checkCollisions?: boolean;
     checkScrollTraps?: boolean;
     checkAccessibleNames?: boolean;
@@ -351,6 +375,7 @@ interface LayoutAuditResult {
     uxScore: UXScore;
     overflowIssues: OverflowIssue[];
     containerOverflowIssues: ContainerOverflowIssue[];
+    flexBlowoutIssues?: FlexBlowoutIssue[];
     textFlowIssues: TextFlowIssue[];
     layoutShiftResult?: LayoutShiftResult;
     touchTargetIssues: TouchTargetIssue[];
@@ -358,6 +383,7 @@ interface LayoutAuditResult {
     readabilityIssues: ReadabilityIssue[];
     contrastIssues: ColorContrastIssue[];
     occlusionIssues: OcclusionIssue[];
+    stickyOcclusionIssues?: StickyOcclusionIssue[];
     collisionIssues: ElementCollisionIssue[];
     scrollTrapIssues: ScrollTrapIssue[];
     accessibleNameIssues: AccessibleNameIssue[];
@@ -367,6 +393,33 @@ interface LayoutAuditResult {
     screenshotBase64?: string;
     annotatedScreenshotBase64?: string;
     executionTimeMs: number;
+}
+interface MatrixAuditOptions extends LayoutAuditOptions {
+    devices?: (string | DevicePreset)[];
+}
+interface ResponsiveMatrixAuditResult {
+    devices: (DevicePreset | {
+        name: string;
+        width: number;
+        height: number;
+    })[];
+    results: Record<string, LayoutAuditResult>;
+    overallScore: number;
+    deviceScores: Record<string, number>;
+    matrixSummary: {
+        globalIssues: Array<{
+            category: string;
+            selector: string;
+            description: string;
+            count: number;
+        }>;
+        breakpointSpecificIssues: Array<{
+            device: string;
+            category: string;
+            selector: string;
+            description: string;
+        }>;
+    };
 }
 
 declare const customMatchers: {
@@ -464,6 +517,22 @@ declare const customMatchers: {
         name: string;
     }>;
     /**
+     * Asserts that no sticky or fixed elements occlude underlying interactive elements or headings.
+     */
+    toHaveNoStickyOcclusion(page: Page, options?: LayoutAuditOptions): Promise<{
+        pass: boolean;
+        message: () => string;
+        name: string;
+    }>;
+    /**
+     * Asserts that no flexbox or grid child elements blowout their parent container boundaries.
+     */
+    toHaveNoFlexBlowout(page: Page, options?: LayoutAuditOptions): Promise<{
+        pass: boolean;
+        message: () => string;
+        name: string;
+    }>;
+    /**
      * Asserts that overall UX score meets or exceeds a target minimum (default 80/100, Grade B/A).
      */
     toPassLayoutAudit(page: Page, options?: LayoutAuditOptions & {
@@ -479,6 +548,8 @@ declare global {
         interface Matchers<R, T> {
             toHaveNoLayoutOverflow(options?: LayoutAuditOptions): Promise<R>;
             toHaveNoContainerOverflow(options?: LayoutAuditOptions): Promise<R>;
+            toHaveNoStickyOcclusion(options?: LayoutAuditOptions): Promise<R>;
+            toHaveNoFlexBlowout(options?: LayoutAuditOptions): Promise<R>;
             toHaveCleanTextFlow(options?: LayoutAuditOptions): Promise<R>;
             toHaveMobileFit(options?: LayoutAuditOptions): Promise<R>;
             toHaveTouchFriendlyTargets(options?: {
@@ -500,4 +571,4 @@ declare global {
     }
 }
 
-export { type AccessibleNameIssue as A, type BoundingBox as B, type ContainerInnerBox as C, type DevicePreset as D, type ElementComputedStyles as E, type FocusIndicatorIssue as F, type LayoutAuditOptions as L, type OcclusionIssue as O, type ReadabilityIssue as R, type ScrollTrapIssue as S, type TextFlowAnomalyType as T, type UXGrade as U, type ViewportInfo as V, type ZoomReflowResult as Z, type LayoutAuditResult as a, type LayoutShiftResult as b, type ContainerOverflowIssue as c, type TextFlowIssue as d, type LayoutShiftItem as e, type ViewportFitResult as f, type TouchTargetIssue as g, type ElementCollisionIssue as h, type ColorContrastIssue as i, type ThumbZoneAnalysis as j, type OverflowIssue as k, type UXScore as l, type UXCategoryScore as m, customMatchers as n };
+export { type AccessibleNameIssue as A, type BoundingBox as B, type ContainerInnerBox as C, type DevicePreset as D, type ElementComputedStyles as E, type FocusIndicatorIssue as F, type LayoutAuditOptions as L, type MatrixAuditOptions as M, type OcclusionIssue as O, type ResponsiveMatrixAuditResult as R, type ScrollTrapIssue as S, type TextFlowAnomalyType as T, type UXGrade as U, type ViewportInfo as V, type ZoomReflowResult as Z, type LayoutAuditResult as a, type LayoutShiftResult as b, type ContainerOverflowIssue as c, type TextFlowIssue as d, type LayoutShiftItem as e, type ViewportFitResult as f, type TouchTargetIssue as g, type ReadabilityIssue as h, type ElementCollisionIssue as i, type ColorContrastIssue as j, type ThumbZoneAnalysis as k, type OverflowIssue as l, type FlexBlowoutIssue as m, type StickyOcclusionIssue as n, type UXScore as o, type UXCategoryScore as p, customMatchers as q };

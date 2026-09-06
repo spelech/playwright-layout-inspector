@@ -1,5 +1,4 @@
 import type { Page } from '@playwright/test';
-import { LayoutAuditIssues } from '../types';
 
 export async function captureAndAnnotateScreenshot(
   page: Page,

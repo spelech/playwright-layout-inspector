@@ -1,0 +1,162 @@
+import type { InPageStickyOcclusionData } from '../core/browser/stickyScanner';
+import type { TextFlowAnomalyData } from '../core/browser/textTraverser';
+
+export interface InPageAuditData {
+  viewport: {
+    width: number;
+    height: number;
+    devicePixelRatio: number;
+    scrollX: number;
+    scrollY: number;
+    scrollWidth: number;
+    scrollHeight: number;
+    metaViewport: string | null;
+  };
+  elements: Array<{
+    selector: string;
+    tagName: string;
+    id: string;
+    className: string;
+    textSnippet: string;
+    rect: {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+      top: number;
+      right: number;
+      bottom: number;
+      left: number;
+    };
+    computedStyles: {
+      overflow: string;
+      overflowX: string;
+      overflowY: string;
+      width: string;
+      minWidth: string;
+      maxWidth: string;
+      height: string;
+      minHeight: string;
+      maxHeight: string;
+      transform: string;
+      display: string;
+      position: string;
+      boxSizing: string;
+      margin: string;
+      padding: string;
+      paddingTop?: string;
+      paddingRight?: string;
+      paddingBottom?: string;
+      paddingLeft?: string;
+      borderTopWidth?: string;
+      borderRightWidth?: string;
+      borderBottomWidth?: string;
+      borderLeftWidth?: string;
+      wordBreak?: string;
+      overflowWrap?: string;
+      whiteSpace?: string;
+      textWrap?: string;
+      flexDirection?: string;
+      flexWrap?: string;
+      flexShrink?: string;
+      flexGrow?: string;
+      flexBasis?: string;
+      fontSize: string;
+      lineHeight: string;
+      fontWeight?: string;
+      color?: string;
+      backgroundColor?: string;
+      zIndex?: string;
+      outlineWidth?: string;
+      outlineStyle?: string;
+      outlineColor?: string;
+      boxShadow?: string;
+    };
+    scrollWidth: number;
+    clientWidth: number;
+    scrollHeight: number;
+    clientHeight: number;
+    isInteractive: boolean;
+    isTextOnly: boolean;
+    hasDirectText?: boolean;
+    hasAccessibleName: boolean;
+    hasSvgOrImgChild: boolean;
+    ancestors?: string[];
+    role?: string | null;
+    ariaLabel?: string | null;
+    ariaLabelledBy?: string | null;
+    title?: string | null;
+  }>;
+  containerOverflows: Array<{
+    childSelector: string;
+    childTagName: string;
+    childId: string;
+    childClassName: string;
+    childRect: {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+      top: number;
+      right: number;
+      bottom: number;
+      left: number;
+    };
+    childStyles: Record<string, string | undefined>;
+    childRole?: string | null;
+    containerSelector: string;
+    containerTagName: string;
+    containerRect: {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+      top: number;
+      right: number;
+      bottom: number;
+      left: number;
+    };
+    containerInnerBox: {
+      top: number;
+      right: number;
+      bottom: number;
+      left: number;
+      width: number;
+      height: number;
+    };
+    containerStyles: {
+      overflowX: string;
+      overflowY: string;
+      display?: string;
+      flexDirection?: string;
+      flexWrap?: string;
+    };
+    overflowRightPx: number;
+    overflowBottomPx: number;
+    overflowLeftPx: number;
+    overflowTopPx: number;
+    isExempt: boolean;
+  }>;
+  textFlowAnomalies: TextFlowAnomalyData[];
+  occlusions: Array<{
+    selector: string;
+    tagName: string;
+    boundingBox: {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+      top: number;
+      right: number;
+      bottom: number;
+      left: number;
+    };
+    raycastResults: Array<{
+      point: { x: number; y: number };
+      topSelector: string;
+      topTagName: string;
+      isTargetOrDescendant: boolean;
+    }>;
+  }>;
+  stickyOcclusions?: InPageStickyOcclusionData[];
+}

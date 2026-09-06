@@ -62,11 +62,12 @@ export function evaluateAuditIssues(
       const over = calculateOverflow(el.rect, viewport);
       if (over.hasOverflow) {
         const remediation = generateOverflowRemediation({
+          tagName: el.tagName,
           selector: el.selector,
-          computedStyles: el.computedStyles,
+          styles: el.computedStyles,
           boundingBox: el.rect,
           viewport,
-          overflowAmountPx: over.overflowRightPx
+          overflowRightPx: over.overflowRightPx
         });
         overflowIssues.push({
           selector: el.selector,
@@ -77,9 +78,9 @@ export function evaluateAuditIssues(
           overflowBottomPx: over.overflowBottomPx,
           overflowLeftPx: over.overflowLeftPx,
           computedStyles: el.computedStyles,
-          culpritDescription: remediation.description,
-          suggestedFix: remediation.cssSuggestion,
-          severity: remediation.severity
+          culpritDescription: remediation.culpritDescription || (remediation as any).description,
+          suggestedFix: remediation.suggestedFix || (remediation as any).cssSuggestion,
+          severity: (remediation as any).severity || (over.overflowRightPx > 50 ? 'critical' : 'warning')
         });
       }
     }
@@ -97,7 +98,7 @@ export function evaluateAuditIssues(
           id: cov.childId,
           className: cov.childClassName,
           rect: cov.childRect,
-          computedStyles: cov.childStyles,
+          computedStyles: cov.childStyles as any,
           role: cov.childRole
         },
         container: {
@@ -105,7 +106,7 @@ export function evaluateAuditIssues(
           tagName: cov.containerTagName,
           rect: cov.containerRect,
           innerBox: cov.containerInnerBox,
-          computedStyles: cov.containerStyles
+          computedStyles: cov.containerStyles as any
         }
       });
       if (issue) containerOverflowIssues.push(issue);
@@ -190,13 +191,12 @@ export function evaluateAuditIssues(
             selector: el.selector,
             tagName: el.tagName,
             textSnippet: el.textSnippet,
-            color: el.computedStyles.color,
-            backgroundColor: el.computedStyles.backgroundColor,
-            fontSize: el.computedStyles.fontSize,
-            fontWeight: el.computedStyles.fontWeight,
-            hasDirectText: el.hasDirectText
+            color: el.computedStyles.color || '#000000',
+            backgroundColor: el.computedStyles.backgroundColor || '#ffffff',
+            fontSizePx: parseFloat(el.computedStyles.fontSize) || 16,
+            fontWeight: el.computedStyles.fontWeight || '400'
           },
-          { minContrastRatio: mergedOptions.minContrastRatio || 4.5 }
+          { minRatio: mergedOptions.minContrastRatio || 4.5 }
         );
         if (issue) contrastIssues.push(issue);
       }

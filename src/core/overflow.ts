@@ -20,17 +20,22 @@ export function calculateOverflow(
 
 export function generateOverflowRemediation(
   issue: {
-    tagName: string;
-    selector: string;
-    boundingBox: BoundingBox;
-    viewport: ViewportInfo;
-    styles: ElementComputedStyles;
-    overflowRightPx: number;
+    tagName?: string;
+    selector?: string;
+    boundingBox?: BoundingBox;
+    viewport?: ViewportInfo;
+    styles?: ElementComputedStyles;
+    computedStyles?: ElementComputedStyles;
+    overflowRightPx?: number;
+    overflowAmountPx?: number;
   }
 ): { culpritDescription: string; suggestedFix: string } {
-  const { tagName, selector, boundingBox, viewport, styles, overflowRightPx } = issue;
-  const widthPx = boundingBox.width;
-  const viewportWidth = viewport.width;
+  const tagName = issue.tagName || 'element';
+  const selector = issue.selector || '';
+  const widthPx = issue.boundingBox ? issue.boundingBox.width : 0;
+  const viewportWidth = issue.viewport ? issue.viewport.width : 0;
+  const overflowRightPx = issue.overflowRightPx ?? issue.overflowAmountPx ?? 0;
+  const styles = issue.styles || issue.computedStyles || ({} as ElementComputedStyles);
 
   let culpritDescription = `Element <${tagName}> (${selector}) has width ${Math.round(widthPx)}px and extends ${Math.round(overflowRightPx)}px beyond viewport width (${viewportWidth}px).`;
   let suggestedFix = `Set max-width: 100% or overflow-x: auto on parent container.`;

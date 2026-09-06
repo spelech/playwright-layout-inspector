@@ -1,162 +1,5 @@
-import { InPageStickyOcclusionData, scanStickyOcclusions } from './browser/stickyScanner';
-import { TextFlowAnomalyData, inspectTextFlowAnomalies } from './browser/textTraverser';
-import { VisualContainerInfo, isVisualContainer, getClosestVisualContainer, checkExemption } from './browser/containerScanner';
-import { getCssSelector } from './browser/selectorGenerator';
-import { parseRgba, getEffectiveBackgroundColor, RgbaColor } from './browser/colorUtils';
-
-export interface InPageAuditData {
-  viewport: {
-    width: number;
-    height: number;
-    devicePixelRatio: number;
-    scrollX: number;
-    scrollY: number;
-    scrollWidth: number;
-    scrollHeight: number;
-    metaViewport: string | null;
-  };
-  elements: Array<{
-    selector: string;
-    tagName: string;
-    id: string;
-    className: string;
-    textSnippet: string;
-    rect: {
-      x: number;
-      y: number;
-      width: number;
-      height: number;
-      top: number;
-      right: number;
-      bottom: number;
-      left: number;
-    };
-    computedStyles: {
-      overflow: string;
-      overflowX: string;
-      overflowY: string;
-      width: string;
-      minWidth: string;
-      maxWidth: string;
-      height: string;
-      minHeight: string;
-      maxHeight: string;
-      transform: string;
-      display: string;
-      position: string;
-      boxSizing: string;
-      margin: string;
-      padding: string;
-      paddingTop?: string;
-      paddingRight?: string;
-      paddingBottom?: string;
-      paddingLeft?: string;
-      borderTopWidth?: string;
-      borderRightWidth?: string;
-      borderBottomWidth?: string;
-      borderLeftWidth?: string;
-      wordBreak?: string;
-      overflowWrap?: string;
-      whiteSpace?: string;
-      textWrap?: string;
-      flexDirection?: string;
-      flexWrap?: string;
-      flexShrink?: string;
-      flexGrow?: string;
-      flexBasis?: string;
-      fontSize: string;
-      lineHeight: string;
-      fontWeight?: string;
-      color?: string;
-      backgroundColor?: string;
-      zIndex?: string;
-      outlineWidth?: string;
-      outlineStyle?: string;
-      outlineColor?: string;
-      boxShadow?: string;
-    };
-    scrollWidth: number;
-    clientWidth: number;
-    scrollHeight: number;
-    clientHeight: number;
-    isInteractive: boolean;
-    isTextOnly: boolean;
-    hasDirectText?: boolean;
-    hasAccessibleName: boolean;
-    hasSvgOrImgChild: boolean;
-    ancestors?: string[];
-    role?: string | null;
-    ariaLabel?: string | null;
-    ariaLabelledBy?: string | null;
-    title?: string | null;
-  }>;
-  containerOverflows: Array<{
-    childSelector: string;
-    childTagName: string;
-    childId: string;
-    childClassName: string;
-    childRect: {
-      x: number;
-      y: number;
-      width: number;
-      height: number;
-      top: number;
-      right: number;
-      bottom: number;
-      left: number;
-    };
-    childStyles: any;
-    childRole?: string | null;
-    containerSelector: string;
-    containerTagName: string;
-    containerRect: {
-      x: number;
-      y: number;
-      width: number;
-      height: number;
-      top: number;
-      right: number;
-      bottom: number;
-      left: number;
-    };
-    containerInnerBox: {
-      top: number;
-      right: number;
-      bottom: number;
-      left: number;
-      width: number;
-      height: number;
-    };
-    containerStyles: any;
-    overflowRightPx: number;
-    overflowBottomPx: number;
-    overflowLeftPx: number;
-    overflowTopPx: number;
-    isExempt: boolean;
-  }>;
-  textFlowAnomalies: TextFlowAnomalyData[];
-  occlusions: Array<{
-    selector: string;
-    tagName: string;
-    boundingBox: {
-      x: number;
-      y: number;
-      width: number;
-      height: number;
-      top: number;
-      right: number;
-      bottom: number;
-      left: number;
-    };
-    raycastResults: Array<{
-      point: { x: number; y: number };
-      topSelector: string;
-      topTagName: string;
-      isTargetOrDescendant: boolean;
-    }>;
-  }>;
-  stickyOcclusions?: InPageStickyOcclusionData[];
-}
+import type { InPageAuditData } from '../types/inPageAudit';
+export type { InPageAuditData } from '../types/inPageAudit';
 
 /**
  * Self-contained in-page audit collector executed inside the browser page via Playwright page.evaluate.
@@ -164,6 +7,13 @@ export interface InPageAuditData {
 export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
   const options = JSON.parse(optionsJson || '{}');
   const ignoreSelectors: string[] = options.ignoreSelectors || [];
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+  const toRect = (r: { top: number; right: number; bottom: number; left: number; width: number; height: number; x?: number; y?: number }) => ({
+    x: round2(r.x ?? r.left), y: round2(r.y ?? r.top),
+    width: round2(r.width), height: round2(r.height),
+    top: round2(r.top), right: round2(r.right),
+    bottom: round2(r.bottom), left: round2(r.left)
+  });
 
   function getCssSelector(el: Element): string {
     if (el.id) return `#${CSS.escape(el.id)}`;
@@ -201,9 +51,7 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
     const m = str.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
     if (!m) return null;
     return {
-      r: parseInt(m[1], 10),
-      g: parseInt(m[2], 10),
-      b: parseInt(m[3], 10),
+      r: parseInt(m[1], 10), g: parseInt(m[2], 10), b: parseInt(m[3], 10),
       a: m[4] !== undefined ? parseFloat(m[4]) : 1
     };
   }
@@ -227,14 +75,7 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
     return Boolean((hasBg || hasBorder || hasShadow || hasRadius || hasOverflow) && hasConstrainedWidth);
   }
 
-  function getClosestVisualContainer(el: Element): {
-    element: Element;
-    selector: string;
-    tagName: string;
-    rect: DOMRect;
-    innerBox: { top: number; right: number; bottom: number; left: number; width: number; height: number };
-    comp: CSSStyleDeclaration;
-  } | null {
+  function getClosestVisualContainer(el: Element) {
     let curr = el.parentElement;
     while (curr && curr.tagName.toLowerCase() !== 'html' && curr.tagName.toLowerCase() !== 'body') {
       const comp = window.getComputedStyle(curr);
@@ -259,14 +100,10 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
           selector: getCssSelector(curr),
           tagName: curr.tagName.toLowerCase(),
           rect: cRect,
-          innerBox: {
-            top: Math.round(innerTop * 100) / 100,
-            right: Math.round(innerRight * 100) / 100,
-            bottom: Math.round(innerBottom * 100) / 100,
-            left: Math.round(innerLeft * 100) / 100,
-            width: Math.round(Math.max(0, innerRight - innerLeft) * 100) / 100,
-            height: Math.round(Math.max(0, innerBottom - innerTop) * 100) / 100
-          },
+          innerBox: toRect({
+            top: innerTop, right: innerRight, bottom: innerBottom, left: innerLeft,
+            width: Math.max(0, innerRight - innerLeft), height: Math.max(0, innerBottom - innerTop)
+          }),
           comp
         };
       }
@@ -291,10 +128,7 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
     if ((containerComp.overflowX === 'auto' || containerComp.overflowX === 'scroll') && (containerComp.overflowY === 'auto' || containerComp.overflowY === 'scroll')) {
       return true;
     }
-    if (el.getAttribute('aria-hidden') === 'true' && comp.pointerEvents === 'none') {
-      return true;
-    }
-    return false;
+    return el.getAttribute('aria-hidden') === 'true' && comp.pointerEvents === 'none';
   }
 
   const metaEl = document.querySelector('meta[name="viewport"]');
@@ -304,11 +138,9 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
   const vpHeight = window.visualViewport ? window.visualViewport.height : (document.documentElement.clientHeight || window.innerHeight);
 
   const vp = {
-    width: Math.round(vpWidth * 100) / 100,
-    height: Math.round(vpHeight * 100) / 100,
+    width: round2(vpWidth), height: round2(vpHeight),
     devicePixelRatio: window.devicePixelRatio || 1,
-    scrollX: window.scrollX,
-    scrollY: window.scrollY,
+    scrollX: window.scrollX, scrollY: window.scrollY,
     scrollWidth: Math.max(document.documentElement.scrollWidth, document.body ? document.body.scrollWidth : 0),
     scrollHeight: Math.max(document.documentElement.scrollHeight, document.body ? document.body.scrollHeight : 0),
     metaViewport
@@ -354,11 +186,8 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
     const title = el.getAttribute('title');
     const hasAccessibleName = !!(ariaLabel?.trim() || ariaLabelledBy?.trim() || title?.trim() || textContent.length > 0);
 
-    const isVisuallyHidden = comp.display === 'none' ||
-      comp.visibility === 'hidden' ||
-      parseFloat(comp.opacity) === 0 ||
-      el.classList.contains('sr-only') ||
-      (rect.width <= 1 && rect.height <= 1 && comp.overflow === 'hidden');
+    const isVisuallyHidden = comp.display === 'none' || comp.visibility === 'hidden' || parseFloat(comp.opacity) === 0 ||
+      el.classList.contains('sr-only') || (rect.width <= 1 && rect.height <= 1 && comp.overflow === 'hidden');
 
     let hasDirectText = false;
     if (!isVisuallyHidden) {
@@ -369,9 +198,7 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
           break;
         }
       }
-      if (tag === 'input' || tag === 'textarea' || tag === 'select' || isTextOnly) {
-        hasDirectText = true;
-      }
+      if (tag === 'input' || tag === 'textarea' || tag === 'select' || isTextOnly) hasDirectText = true;
     }
 
     const ancestors: string[] = [];
@@ -381,7 +208,7 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
       p = p.parentElement;
     }
 
-    const bgStack: { r: number, g: number, b: number, a: number }[] = [];
+    const bgStack: { r: number; g: number; b: number; a: number }[] = [];
     let currBgEl: Element | null = el;
     while (currBgEl) {
       const bgStyle = window.getComputedStyle(currBgEl).backgroundColor;
@@ -406,81 +233,34 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
     const effectiveBg = `rgb(${compBg.r}, ${compBg.g}, ${compBg.b})`;
 
     const computedStylesObj = {
-      overflow: comp.overflow,
-      overflowX: comp.overflowX,
-      overflowY: comp.overflowY,
-      width: comp.width,
-      minWidth: comp.minWidth,
-      maxWidth: comp.maxWidth,
-      height: comp.height,
-      minHeight: comp.minHeight,
-      maxHeight: comp.maxHeight,
-      transform: comp.transform,
-      display: comp.display,
-      position: comp.position,
-      boxSizing: comp.boxSizing,
-      margin: comp.margin,
-      padding: comp.padding,
-      paddingTop: comp.paddingTop,
-      paddingRight: comp.paddingRight,
-      paddingBottom: comp.paddingBottom,
-      paddingLeft: comp.paddingLeft,
-      borderTopWidth: comp.borderTopWidth,
-      borderRightWidth: comp.borderRightWidth,
-      borderBottomWidth: comp.borderBottomWidth,
-      borderLeftWidth: comp.borderLeftWidth,
-      wordBreak: comp.wordBreak,
-      overflowWrap: comp.overflowWrap,
-      whiteSpace: comp.whiteSpace,
-      textWrap: (comp as any).textWrap || comp.whiteSpace,
-      flexDirection: comp.flexDirection,
-      flexWrap: comp.flexWrap,
-      flexShrink: comp.flexShrink,
-      flexGrow: comp.flexGrow,
-      flexBasis: comp.flexBasis,
-      fontSize: comp.fontSize,
-      lineHeight: comp.lineHeight,
-      fontWeight: comp.fontWeight,
-      color: comp.color,
-      backgroundColor: effectiveBg,
-      zIndex: comp.zIndex,
-      outlineWidth: comp.outlineWidth,
-      outlineStyle: comp.outlineStyle,
-      outlineColor: comp.outlineColor,
-      boxShadow: comp.boxShadow
+      overflow: comp.overflow, overflowX: comp.overflowX, overflowY: comp.overflowY,
+      width: comp.width, minWidth: comp.minWidth, maxWidth: comp.maxWidth,
+      height: comp.height, minHeight: comp.minHeight, maxHeight: comp.maxHeight,
+      transform: comp.transform, display: comp.display, position: comp.position,
+      boxSizing: comp.boxSizing, margin: comp.margin, padding: comp.padding,
+      paddingTop: comp.paddingTop, paddingRight: comp.paddingRight,
+      paddingBottom: comp.paddingBottom, paddingLeft: comp.paddingLeft,
+      borderTopWidth: comp.borderTopWidth, borderRightWidth: comp.borderRightWidth,
+      borderBottomWidth: comp.borderBottomWidth, borderLeftWidth: comp.borderLeftWidth,
+      wordBreak: comp.wordBreak, overflowWrap: comp.overflowWrap,
+      whiteSpace: comp.whiteSpace, textWrap: (comp as any).textWrap || comp.whiteSpace,
+      flexDirection: comp.flexDirection, flexWrap: comp.flexWrap,
+      flexShrink: comp.flexShrink, flexGrow: comp.flexGrow, flexBasis: comp.flexBasis,
+      fontSize: comp.fontSize, lineHeight: comp.lineHeight, fontWeight: comp.fontWeight,
+      color: comp.color, backgroundColor: effectiveBg, zIndex: comp.zIndex,
+      outlineWidth: comp.outlineWidth, outlineStyle: comp.outlineStyle,
+      outlineColor: comp.outlineColor, boxShadow: comp.boxShadow
     };
 
     collectedElements.push({
-      selector,
-      tagName: tag,
-      id: el.id || '',
+      selector, tagName: tag, id: el.id || '',
       className: typeof el.className === 'string' ? el.className : '',
-      textSnippet,
-      ancestors,
-      hasDirectText,
-      rect: {
-        x: Math.round(rect.x * 100) / 100,
-        y: Math.round(rect.y * 100) / 100,
-        width: Math.round(rect.width * 100) / 100,
-        height: Math.round(rect.height * 100) / 100,
-        top: Math.round(rect.top * 100) / 100,
-        right: Math.round(rect.right * 100) / 100,
-        bottom: Math.round(rect.bottom * 100) / 100,
-        left: Math.round(rect.left * 100) / 100
-      },
+      textSnippet, ancestors, hasDirectText, rect: toRect(rect),
       computedStyles: computedStylesObj,
-      scrollWidth: el.scrollWidth,
-      clientWidth: el.clientWidth,
-      scrollHeight: el.scrollHeight,
-      clientHeight: el.clientHeight,
-      isInteractive,
-      isTextOnly,
-      hasAccessibleName,
-      hasSvgOrImgChild,
-      role,
-      ariaLabel,
-      ariaLabelledBy,
-      title
+      scrollWidth: el.scrollWidth, clientWidth: el.clientWidth,
+      scrollHeight: el.scrollHeight, clientHeight: el.clientHeight,
+      isInteractive, isTextOnly, hasAccessibleName, hasSvgOrImgChild,
+      role, ariaLabel, ariaLabelledBy, title
     });
 
     // Visual Container Containment
@@ -494,47 +274,17 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
       const overTop = Math.max(0, inner.top - rect.top);
 
       if ((overRight > 1.5 || overLeft > 1.5 || overBottom > 2) && !isExempt) {
-        const hasOverflowingAncestor = ancestors.some(anc => reportedOverflowParentSelectors.has(anc));
-        if (!hasOverflowingAncestor) {
+        if (!ancestors.some(anc => reportedOverflowParentSelectors.has(anc))) {
           reportedOverflowParentSelectors.add(selector);
           containerOverflows.push({
-            childSelector: selector,
-            childTagName: tag,
-            childId: el.id || '',
+            childSelector: selector, childTagName: tag, childId: el.id || '',
             childClassName: typeof el.className === 'string' ? el.className : '',
-            childRect: {
-              x: Math.round(rect.x * 100) / 100,
-              y: Math.round(rect.y * 100) / 100,
-              width: Math.round(rect.width * 100) / 100,
-              height: Math.round(rect.height * 100) / 100,
-              top: Math.round(rect.top * 100) / 100,
-              right: Math.round(rect.right * 100) / 100,
-              bottom: Math.round(rect.bottom * 100) / 100,
-              left: Math.round(rect.left * 100) / 100
-            },
-            childStyles: computedStylesObj,
-            childRole: role,
-            containerSelector: visualContainer.selector,
-            containerTagName: visualContainer.tagName,
-            containerRect: {
-              x: Math.round(visualContainer.rect.x * 100) / 100,
-              y: Math.round(visualContainer.rect.y * 100) / 100,
-              width: Math.round(visualContainer.rect.width * 100) / 100,
-              height: Math.round(visualContainer.rect.height * 100) / 100,
-              top: Math.round(visualContainer.rect.top * 100) / 100,
-              right: Math.round(visualContainer.rect.right * 100) / 100,
-              bottom: Math.round(visualContainer.rect.bottom * 100) / 100,
-              left: Math.round(visualContainer.rect.left * 100) / 100
-            },
-            containerInnerBox: inner,
-            containerStyles: {
-              overflowX: visualContainer.comp.overflowX,
-              overflowY: visualContainer.comp.overflowY
-            },
-            overflowRightPx: Math.round(overRight * 100) / 100,
-            overflowBottomPx: Math.round(overBottom * 100) / 100,
-            overflowLeftPx: Math.round(overLeft * 100) / 100,
-            overflowTopPx: Math.round(overTop * 100) / 100,
+            childRect: toRect(rect), childStyles: computedStylesObj, childRole: role,
+            containerSelector: visualContainer.selector, containerTagName: visualContainer.tagName,
+            containerRect: toRect(visualContainer.rect), containerInnerBox: inner,
+            containerStyles: { overflowX: visualContainer.comp.overflowX, overflowY: visualContainer.comp.overflowY },
+            overflowRightPx: round2(overRight), overflowBottomPx: round2(overBottom),
+            overflowLeftPx: round2(overLeft), overflowTopPx: round2(overTop),
             isExempt
           });
         }
@@ -552,30 +302,17 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
         let match: RegExpExecArray | null;
         while ((match = regex.exec(val)) !== null) {
           const word = match[0];
-          const startIndex = match.index;
-          const endIndex = startIndex + word.length;
           try {
             const range = document.createRange();
-            range.setStart(textNode, startIndex);
-            range.setEnd(textNode, endIndex);
+            range.setStart(textNode, match.index);
+            range.setEnd(textNode, match.index + word.length);
             const rects = range.getClientRects();
-            if (rects.length > 1) {
-              const firstTop = rects[0].top;
-              const lastTop = rects[rects.length - 1].top;
-              if (Math.abs(lastTop - firstTop) > 3) {
-                textFlowAnomalies.push({
-                  selector,
-                  tagName: tag,
-                  textSnippet,
-                  anomalyType: 'mid-word-break',
-                  word,
-                  computedStyles: {
-                    wordBreak: comp.wordBreak,
-                    overflowWrap: comp.overflowWrap
-                  }
-                });
-                break;
-              }
+            if (rects.length > 1 && Math.abs(rects[rects.length - 1].top - rects[0].top) > 3) {
+              textFlowAnomalies.push({
+                selector, tagName: tag, textSnippet, anomalyType: 'mid-word-break', word,
+                computedStyles: { wordBreak: comp.wordBreak, overflowWrap: comp.overflowWrap }
+              });
+              break;
             }
           } catch {}
         }
@@ -611,15 +348,12 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
 
         const lineGroups: Array<{ top: number; words: string[] }> = [];
         for (const item of measuredWords) {
-          let placed = false;
-          for (const group of lineGroups) {
-            if (Math.abs(item.top - group.top) < 6) {
-              group.words.push(item.word);
-              placed = true;
-              break;
-            }
+          let grp = lineGroups.find(g => Math.abs(item.top - g.top) < 6);
+          if (grp) {
+            grp.words.push(item.word);
+          } else {
+            lineGroups.push({ top: item.top, words: [item.word] });
           }
-          if (!placed) lineGroups.push({ top: item.top, words: [item.word] });
         }
 
         const lines = lineGroups.map(g => g.words);
@@ -628,31 +362,15 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
           const lastLineText = lastLine.join(' ');
           if (isButton && textContent.length < 40) {
             textFlowAnomalies.push({
-              selector,
-              tagName: tag,
-              textSnippet,
-              anomalyType: 'broken-multiline-button',
-              lineCount: lines.length,
-              orphanText: lastLineText,
-              lastLineWordCount: lastLine.length,
-              computedStyles: {
-                whiteSpace: comp.whiteSpace,
-                textWrap: (comp as any).textWrap
-              }
+              selector, tagName: tag, textSnippet, anomalyType: 'broken-multiline-button',
+              lineCount: lines.length, orphanText: lastLineText, lastLineWordCount: lastLine.length,
+              computedStyles: { whiteSpace: comp.whiteSpace, textWrap: (comp as any).textWrap }
             });
           } else if ((isHeadingTag || isLabelTag) && lastLine.length === 1 && lines[0].length >= 2) {
             textFlowAnomalies.push({
-              selector,
-              tagName: tag,
-              textSnippet,
-              anomalyType: 'orphan-wrap',
-              lineCount: lines.length,
-              orphanText: lastLineText,
-              lastLineWordCount: 1,
-              computedStyles: {
-                textWrap: (comp as any).textWrap || 'normal',
-                whiteSpace: comp.whiteSpace
-              }
+              selector, tagName: tag, textSnippet, anomalyType: 'orphan-wrap',
+              lineCount: lines.length, orphanText: lastLineText, lastLineWordCount: 1,
+              computedStyles: { textWrap: (comp as any).textWrap || 'normal', whiteSpace: comp.whiteSpace }
             });
           }
         }
@@ -666,17 +384,9 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
         const isRow = !parentComp.flexDirection || parentComp.flexDirection.startsWith('row');
         if (isRow && rect.width < 75 && el.scrollWidth > el.clientWidth + 3 && textContent.length > 8) {
           textFlowAnomalies.push({
-            selector,
-            tagName: tag,
-            textSnippet,
-            anomalyType: 'crushed-flex-column',
-            elementWidth: rect.width,
-            scrollWidth: el.scrollWidth,
-            clientWidth: el.clientWidth,
-            computedStyles: {
-              display: comp.display,
-              flex: comp.flex
-            }
+            selector, tagName: tag, textSnippet, anomalyType: 'crushed-flex-column',
+            elementWidth: rect.width, scrollWidth: el.scrollWidth, clientWidth: el.clientWidth,
+            computedStyles: { display: comp.display, flex: comp.flex }
           });
         }
       }
@@ -708,25 +418,16 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
       if (pt.x >= 0 && pt.x <= vp.width && pt.y >= 0 && pt.y <= vp.height) {
         const topEl = document.elementFromPoint(pt.x, pt.y);
         if (topEl) {
-          const topSelector = getCssSelector(topEl);
-          const isTargetOrDescendant = topEl === targetDomEl || targetDomEl.contains(topEl) || topEl.contains(targetDomEl);
           raycastResults.push({
-            point: pt,
-            topSelector,
-            topTagName: topEl.tagName.toLowerCase(),
-            isTargetOrDescendant
+            point: pt, topSelector: getCssSelector(topEl), topTagName: topEl.tagName.toLowerCase(),
+            isTargetOrDescendant: topEl === targetDomEl || targetDomEl.contains(topEl) || topEl.contains(targetDomEl)
           });
         }
       }
     }
 
     if (raycastResults.some(res => !res.isTargetOrDescendant)) {
-      occlusions.push({
-        selector: item.selector,
-        tagName: item.tagName,
-        boundingBox: item.rect,
-        raycastResults
-      });
+      occlusions.push({ selector: item.selector, tagName: item.tagName, boundingBox: item.rect, raycastResults });
     }
   }
 
@@ -736,20 +437,18 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
     return (pos === 'fixed' || pos === 'sticky') && el.rect.width > 20 && el.rect.height > 10;
   });
 
-  const stickyOcclusions: InPageStickyOcclusionData[] = [];
+  const stickyOcclusions: InPageAuditData['stickyOcclusions'] = [];
   for (const sticky of stickyItems) {
     const sRect = sticky.rect;
     const sZ = parseInt(sticky.computedStyles.zIndex || '0', 10) || 0;
 
     for (const target of collectedElements) {
-      if (target.selector === sticky.selector) continue;
-      if (target.ancestors && target.ancestors.includes(sticky.selector)) continue;
+      if (target.selector === sticky.selector || target.ancestors?.includes(sticky.selector)) continue;
       const isHeading = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(target.tagName.toLowerCase());
       if (!target.isInteractive && !isHeading) continue;
 
       const tRect = target.rect;
-      const tZ = parseInt(target.computedStyles.zIndex || '0', 10) || 0;
-      if (tZ > sZ) continue;
+      if ((parseInt(target.computedStyles.zIndex || '0', 10) || 0) > sZ) continue;
 
       const interLeft = Math.max(sRect.left, tRect.left);
       const interTop = Math.max(sRect.top, tRect.top);
@@ -757,28 +456,19 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
       const interBottom = Math.min(sRect.bottom, tRect.bottom);
 
       if (interRight > interLeft + 2 && interBottom > interTop + 2) {
-        const overlapWidth = Math.round((interRight - interLeft) * 100) / 100;
-        const overlapHeight = Math.round((interBottom - interTop) * 100) / 100;
-        const targetArea = Math.max(1, tRect.width * tRect.height);
+        const overlapWidth = round2(interRight - interLeft);
+        const overlapHeight = round2(interBottom - interTop);
         const overlapArea = overlapWidth * overlapHeight;
-        if (overlapArea / targetArea > 0.15 || overlapArea > 100) {
+        if (overlapArea / Math.max(1, tRect.width * tRect.height) > 0.15 || overlapArea > 100) {
           stickyOcclusions.push({
-            stickySelector: sticky.selector,
-            stickyTagName: sticky.tagName,
+            stickySelector: sticky.selector, stickyTagName: sticky.tagName,
             positionType: sticky.computedStyles.position as 'fixed' | 'sticky',
-            occludedSelector: target.selector,
-            occludedTagName: target.tagName,
+            occludedSelector: target.selector, occludedTagName: target.tagName,
             isInteractive: target.isInteractive,
-            overlapRect: {
-              x: Math.round(interLeft * 100) / 100,
-              y: Math.round(interTop * 100) / 100,
-              width: overlapWidth,
-              height: overlapHeight,
-              top: Math.round(interTop * 100) / 100,
-              right: Math.round(interRight * 100) / 100,
-              bottom: Math.round(interBottom * 100) / 100,
-              left: Math.round(interLeft * 100) / 100
-            }
+            overlapRect: toRect({
+              x: interLeft, y: interTop, width: overlapWidth, height: overlapHeight,
+              top: interTop, right: interRight, bottom: interBottom, left: interLeft
+            })
           });
         }
       }

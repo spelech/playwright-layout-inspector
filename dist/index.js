@@ -149,9 +149,12 @@ function calculateOverflow(rect, viewport) {
   };
 }
 function generateOverflowRemediation(issue) {
-  const { tagName, selector, boundingBox, viewport, styles, overflowRightPx } = issue;
-  const widthPx = boundingBox.width;
-  const viewportWidth = viewport.width;
+  const tagName = issue.tagName || "element";
+  const selector = issue.selector || "";
+  const widthPx = issue.boundingBox ? issue.boundingBox.width : 0;
+  const viewportWidth = issue.viewport ? issue.viewport.width : 0;
+  const overflowRightPx = issue.overflowRightPx ?? issue.overflowAmountPx ?? 0;
+  const styles = issue.styles || issue.computedStyles || {};
   let culpritDescription = `Element <${tagName}> (${selector}) has width ${Math.round(widthPx)}px and extends ${Math.round(overflowRightPx)}px beyond viewport width (${viewportWidth}px).`;
   let suggestedFix = `Set max-width: 100% or overflow-x: auto on parent container.`;
   if (styles.transform && styles.transform !== "none" && styles.transform.includes("matrix")) {
@@ -1011,6 +1014,7 @@ function computeUXScore(params) {
   const {
     overflowIssues,
     containerOverflowIssues = [],
+    flexBlowoutIssues = [],
     textFlowIssues = [],
     viewportFit,
     layoutShiftResult,
@@ -1018,6 +1022,7 @@ function computeUXScore(params) {
     readabilityIssues,
     contrastIssues = [],
     occlusionIssues,
+    stickyOcclusionIssues = [],
     collisionIssues = [],
     scrollTrapIssues = [],
     accessibleNameIssues = [],
@@ -1035,11 +1040,14 @@ function computeUXScore(params) {
   for (const cIssue of containerOverflowIssues) {
     overflowPenalty += cIssue.severity === "critical" ? 8 : 3;
   }
+  for (const fIssue of flexBlowoutIssues) {
+    overflowPenalty += fIssue.severity === "critical" ? 8 : 4;
+  }
   for (const trap of scrollTrapIssues) {
     overflowPenalty += trap.severity === "critical" ? 6 : 2;
   }
   const overflowScoreVal = Math.max(0, Math.min(maxOverflowScore, maxOverflowScore - overflowPenalty));
-  const totalOverflowIssues = overflowIssues.length + containerOverflowIssues.length + scrollTrapIssues.length + viewportFit.issues.length;
+  const totalOverflowIssues = overflowIssues.length + containerOverflowIssues.length + flexBlowoutIssues.length + scrollTrapIssues.length + viewportFit.issues.length;
   const overflowCategory = {
     name: "Overflow & Viewport Fit",
     score: Math.round(overflowScoreVal * 10) / 10,
@@ -1048,7 +1056,7 @@ function computeUXScore(params) {
     grade: calculateGrade(overflowScoreVal / maxOverflowScore * 100),
     passed: overflowScoreVal >= maxOverflowScore * 0.8,
     issueCount: totalOverflowIssues,
-    summary: overflowIssues.length === 0 && containerOverflowIssues.length === 0 && scrollTrapIssues.length === 0 && !viewportFit.contentBleeds ? "Perfect viewport and container containment fit without horizontal bleed or scroll traps." : `${overflowIssues.length} viewport overflow, ${containerOverflowIssues.length} container bleed, ${scrollTrapIssues.length} scroll trap issues detected.`
+    summary: overflowIssues.length === 0 && containerOverflowIssues.length === 0 && flexBlowoutIssues.length === 0 && scrollTrapIssues.length === 0 && !viewportFit.contentBleeds ? "Perfect viewport and container containment fit without horizontal bleed or scroll traps." : `${overflowIssues.length} viewport overflow, ${containerOverflowIssues.length} container bleed, ${flexBlowoutIssues.length} flex blowout, ${scrollTrapIssues.length} scroll trap issues detected.`
   };
   const maxStabilityScore = 20;
   let stabilityScoreVal = maxStabilityScore;
@@ -1101,11 +1109,14 @@ function computeUXScore(params) {
   for (const occ of occlusionIssues) {
     readabilityPenalty += occ.severity === "critical" ? 5 : 2;
   }
+  for (const sOcc of stickyOcclusionIssues) {
+    readabilityPenalty += sOcc.severity === "critical" ? 6 : 3;
+  }
   for (const col of collisionIssues) {
     readabilityPenalty += col.severity === "critical" ? 5 : 2;
   }
   const readabilityScoreVal = Math.max(0, Math.min(maxReadabilityScore, maxReadabilityScore - readabilityPenalty));
-  const totalVisibilityIssues = readabilityIssues.length + textFlowIssues.length + occlusionIssues.length + collisionIssues.length;
+  const totalVisibilityIssues = readabilityIssues.length + textFlowIssues.length + occlusionIssues.length + stickyOcclusionIssues.length + collisionIssues.length;
   const readabilityCategory = {
     name: "Readability & Visual Hierarchy",
     score: Math.round(readabilityScoreVal * 10) / 10,
@@ -1160,10 +1171,19 @@ function computeUXScore(params) {
 function collectInPageAuditScript(optionsJson = "{}") {
   const options = JSON.parse(optionsJson || "{}");
   const ignoreSelectors = options.ignoreSelectors || [];
+  const round2 = (n) => Math.round(n * 100) / 100;
+  const toRect = (r) => ({
+    x: round2(r.x ?? r.left),
+    y: round2(r.y ?? r.top),
+    width: round2(r.width),
+    height: round2(r.height),
+    top: round2(r.top),
+    right: round2(r.right),
+    bottom: round2(r.bottom),
+    left: round2(r.left)
+  });
   function getCssSelector(el) {
-    if (el.id) {
-      return `#${CSS.escape(el.id)}`;
-    }
+    if (el.id) return `#${CSS.escape(el.id)}`;
     const path2 = [];
     let current = el;
     while (current && current.nodeType === Node.ELEMENT_NODE) {
@@ -1184,9 +1204,7 @@ function collectInPageAuditScript(optionsJson = "{}") {
             selector += `.${CSS.escape(firstClass)}`;
           }
         }
-        if (nth > 1) {
-          selector += `:nth-of-type(${nth})`;
-        }
+        if (nth > 1) selector += `:nth-of-type(${nth})`;
       }
       path2.unshift(selector);
       current = current.parentElement;
@@ -1194,24 +1212,17 @@ function collectInPageAuditScript(optionsJson = "{}") {
     }
     return path2.join(" > ");
   }
-  const metaEl = document.querySelector('meta[name="viewport"]');
-  const metaViewport = metaEl ? metaEl.getAttribute("content") : null;
-  const vpWidth = window.visualViewport ? window.visualViewport.width : document.documentElement.clientWidth || window.innerWidth;
-  const vpHeight = window.visualViewport ? window.visualViewport.height : document.documentElement.clientHeight || window.innerHeight;
-  const vp = {
-    width: Math.round(vpWidth * 100) / 100,
-    height: Math.round(vpHeight * 100) / 100,
-    devicePixelRatio: window.devicePixelRatio || 1,
-    scrollX: window.scrollX,
-    scrollY: window.scrollY,
-    scrollWidth: Math.max(document.documentElement.scrollWidth, document.body ? document.body.scrollWidth : 0),
-    scrollHeight: Math.max(document.documentElement.scrollHeight, document.body ? document.body.scrollHeight : 0),
-    metaViewport
-  };
-  const allElements = Array.from(document.querySelectorAll("body *"));
-  const collectedElements = [];
-  const containerOverflows = [];
-  const textFlowAnomalies = [];
+  function parseRgba(str) {
+    if (!str || str === "transparent") return null;
+    const m = str.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+    if (!m) return null;
+    return {
+      r: parseInt(m[1], 10),
+      g: parseInt(m[2], 10),
+      b: parseInt(m[3], 10),
+      a: m[4] !== void 0 ? parseFloat(m[4]) : 1
+    };
+  }
   function isVisualContainer(targetEl, style) {
     const t = targetEl.tagName.toLowerCase();
     if (t === "body" || t === "html") return false;
@@ -1220,9 +1231,7 @@ function collectInPageAuditScript(optionsJson = "{}") {
     const r = targetEl.getAttribute("role");
     if (r && ["dialog", "alertdialog", "region", "tabpanel", "group", "form"].includes(r)) return true;
     const c = (typeof targetEl.className === "string" ? targetEl.className : "").toLowerCase();
-    if (/modal|card|panel|dialog|drawer|sheet|popup|box|container|wrapper|frame|window|tabpanel/.test(c)) {
-      return true;
-    }
+    if (/modal|card|panel|dialog|drawer|sheet|popup|box|container|wrapper|frame|window|tabpanel/.test(c)) return true;
     const hasBg = !!(style.backgroundColor && style.backgroundColor !== "rgba(0, 0, 0, 0)" && style.backgroundColor !== "transparent");
     const hasBorder = !!((parseFloat(style.borderTopWidth || "0") > 0 || parseFloat(style.borderWidth || "0") > 0) && style.borderStyle !== "none");
     const hasShadow = !!(style.boxShadow && style.boxShadow !== "none");
@@ -1254,14 +1263,14 @@ function collectInPageAuditScript(optionsJson = "{}") {
           selector: getCssSelector(curr),
           tagName: curr.tagName.toLowerCase(),
           rect: cRect,
-          innerBox: {
-            top: Math.round(innerTop * 100) / 100,
-            right: Math.round(innerRight * 100) / 100,
-            bottom: Math.round(innerBottom * 100) / 100,
-            left: Math.round(innerLeft * 100) / 100,
-            width: Math.round(Math.max(0, innerRight - innerLeft) * 100) / 100,
-            height: Math.round(Math.max(0, innerBottom - innerTop) * 100) / 100
-          },
+          innerBox: toRect({
+            top: innerTop,
+            right: innerRight,
+            bottom: innerBottom,
+            left: innerLeft,
+            width: Math.max(0, innerRight - innerLeft),
+            height: Math.max(0, innerBottom - innerTop)
+          }),
           comp
         };
       }
@@ -1275,52 +1284,44 @@ function collectInPageAuditScript(optionsJson = "{}") {
     const role = el.getAttribute("role") || "";
     if (["tooltip", "menu", "listbox", "dialog", "alertdialog"].includes(role)) return true;
     const cls = (typeof el.className === "string" ? el.className : "").toLowerCase();
-    if (/tooltip|popover|dropdown|menu|toast|floating|popper|modal-backdrop|select-options|tippy-box/.test(cls)) {
-      return true;
-    }
+    if (/tooltip|popover|dropdown|menu|toast|floating|popper|modal-backdrop|select-options|tippy-box/.test(cls)) return true;
     const ariaLabel = (el.getAttribute("aria-label") || "").toLowerCase();
-    if (/close|btn-close|dismiss|badge|indicator|pill|tag/.test(cls) || ariaLabel.includes("close") || ariaLabel.includes("dismiss")) {
-      if (comp.position === "absolute") {
-        return true;
-      }
+    if ((/close|btn-close|dismiss|badge|indicator|pill|tag/.test(cls) || ariaLabel.includes("close") || ariaLabel.includes("dismiss")) && comp.position === "absolute") {
+      return true;
     }
     if ((containerComp.overflowX === "auto" || containerComp.overflowX === "scroll") && (containerComp.overflowY === "auto" || containerComp.overflowY === "scroll")) {
       return true;
     }
-    if (el.getAttribute("aria-hidden") === "true" && comp.pointerEvents === "none") {
-      return true;
-    }
-    return false;
+    return el.getAttribute("aria-hidden") === "true" && comp.pointerEvents === "none";
   }
+  const metaEl = document.querySelector('meta[name="viewport"]');
+  const metaViewport = metaEl ? metaEl.getAttribute("content") : null;
+  const vpWidth = window.visualViewport ? window.visualViewport.width : document.documentElement.clientWidth || window.innerWidth;
+  const vpHeight = window.visualViewport ? window.visualViewport.height : document.documentElement.clientHeight || window.innerHeight;
+  const vp = {
+    width: round2(vpWidth),
+    height: round2(vpHeight),
+    devicePixelRatio: window.devicePixelRatio || 1,
+    scrollX: window.scrollX,
+    scrollY: window.scrollY,
+    scrollWidth: Math.max(document.documentElement.scrollWidth, document.body ? document.body.scrollWidth : 0),
+    scrollHeight: Math.max(document.documentElement.scrollHeight, document.body ? document.body.scrollHeight : 0),
+    metaViewport
+  };
+  const allElements = Array.from(document.querySelectorAll("body *"));
+  const collectedElements = [];
+  const containerOverflows = [];
+  const textFlowAnomalies = [];
   const reportedOverflowParentSelectors = /* @__PURE__ */ new Set();
   for (const el of allElements) {
-    let parseRgba2 = function(str) {
-      if (!str || str === "transparent") return null;
-      const m = str.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
-      if (!m) return null;
-      return {
-        r: parseInt(m[1], 10),
-        g: parseInt(m[2], 10),
-        b: parseInt(m[3], 10),
-        a: m[4] !== void 0 ? parseFloat(m[4]) : 1
-      };
-    };
     const tag = el.tagName.toLowerCase();
-    if (["script", "style", "noscript", "path", "g", "defs", "clippath", "symbol", "use", "br", "hr"].includes(tag)) {
-      continue;
-    }
+    if (["script", "style", "noscript", "path", "g", "defs", "clippath", "symbol", "use", "br", "hr"].includes(tag)) continue;
     const selector = getCssSelector(el);
-    if (ignoreSelectors.some((ign) => selector.includes(ign))) {
-      continue;
-    }
+    if (ignoreSelectors.some((ign) => selector.includes(ign))) continue;
     const rect = el.getBoundingClientRect();
-    if (rect.width <= 0 && rect.height <= 0) {
-      continue;
-    }
+    if (rect.width <= 0 && rect.height <= 0) continue;
     const comp = window.getComputedStyle(el);
-    if (comp.display === "none" || comp.visibility === "hidden" || parseFloat(comp.opacity) === 0) {
-      continue;
-    }
+    if (comp.display === "none" || comp.visibility === "hidden" || parseFloat(comp.opacity) === 0) continue;
     const role = el.getAttribute("role");
     const isButton = tag === "button" || role === "button" || role === "tab" || role === "menuitem" || typeof el.className === "string" && el.className.includes("btn");
     const isLink = tag === "a" && el.hasAttribute("href");
@@ -1348,9 +1349,7 @@ function collectInPageAuditScript(optionsJson = "{}") {
           break;
         }
       }
-      if (tag === "input" || tag === "textarea" || tag === "select" || isTextOnly) {
-        hasDirectText = true;
-      }
+      if (tag === "input" || tag === "textarea" || tag === "select" || isTextOnly) hasDirectText = true;
     }
     const ancestors = [];
     let p = el.parentElement;
@@ -1362,10 +1361,8 @@ function collectInPageAuditScript(optionsJson = "{}") {
     let currBgEl = el;
     while (currBgEl) {
       const bgStyle = window.getComputedStyle(currBgEl).backgroundColor;
-      const parsed = parseRgba2(bgStyle);
-      if (parsed && parsed.a > 0) {
-        bgStack.unshift(parsed);
-      }
+      const parsed = parseRgba(bgStyle);
+      if (parsed && parsed.a > 0) bgStack.unshift(parsed);
       currBgEl = currBgEl.parentElement;
     }
     let compBg = { r: 255, g: 255, b: 255};
@@ -1434,16 +1431,7 @@ function collectInPageAuditScript(optionsJson = "{}") {
       textSnippet,
       ancestors,
       hasDirectText,
-      rect: {
-        x: Math.round(rect.x * 100) / 100,
-        y: Math.round(rect.y * 100) / 100,
-        width: Math.round(rect.width * 100) / 100,
-        height: Math.round(rect.height * 100) / 100,
-        top: Math.round(rect.top * 100) / 100,
-        right: Math.round(rect.right * 100) / 100,
-        bottom: Math.round(rect.bottom * 100) / 100,
-        left: Math.round(rect.left * 100) / 100
-      },
+      rect: toRect(rect),
       computedStyles: computedStylesObj,
       scrollWidth: el.scrollWidth,
       clientWidth: el.clientWidth,
@@ -1467,47 +1455,25 @@ function collectInPageAuditScript(optionsJson = "{}") {
       const overBottom = Math.max(0, rect.bottom - inner.bottom);
       const overTop = Math.max(0, inner.top - rect.top);
       if ((overRight > 1.5 || overLeft > 1.5 || overBottom > 2) && !isExempt) {
-        const hasOverflowingAncestor = ancestors.some((anc) => reportedOverflowParentSelectors.has(anc));
-        if (!hasOverflowingAncestor) {
+        if (!ancestors.some((anc) => reportedOverflowParentSelectors.has(anc))) {
           reportedOverflowParentSelectors.add(selector);
           containerOverflows.push({
             childSelector: selector,
             childTagName: tag,
             childId: el.id || "",
             childClassName: typeof el.className === "string" ? el.className : "",
-            childRect: {
-              x: Math.round(rect.x * 100) / 100,
-              y: Math.round(rect.y * 100) / 100,
-              width: Math.round(rect.width * 100) / 100,
-              height: Math.round(rect.height * 100) / 100,
-              top: Math.round(rect.top * 100) / 100,
-              right: Math.round(rect.right * 100) / 100,
-              bottom: Math.round(rect.bottom * 100) / 100,
-              left: Math.round(rect.left * 100) / 100
-            },
+            childRect: toRect(rect),
             childStyles: computedStylesObj,
             childRole: role,
             containerSelector: visualContainer.selector,
             containerTagName: visualContainer.tagName,
-            containerRect: {
-              x: Math.round(visualContainer.rect.x * 100) / 100,
-              y: Math.round(visualContainer.rect.y * 100) / 100,
-              width: Math.round(visualContainer.rect.width * 100) / 100,
-              height: Math.round(visualContainer.rect.height * 100) / 100,
-              top: Math.round(visualContainer.rect.top * 100) / 100,
-              right: Math.round(visualContainer.rect.right * 100) / 100,
-              bottom: Math.round(visualContainer.rect.bottom * 100) / 100,
-              left: Math.round(visualContainer.rect.left * 100) / 100
-            },
+            containerRect: toRect(visualContainer.rect),
             containerInnerBox: inner,
-            containerStyles: {
-              overflowX: visualContainer.comp.overflowX,
-              overflowY: visualContainer.comp.overflowY
-            },
-            overflowRightPx: Math.round(overRight * 100) / 100,
-            overflowBottomPx: Math.round(overBottom * 100) / 100,
-            overflowLeftPx: Math.round(overLeft * 100) / 100,
-            overflowTopPx: Math.round(overTop * 100) / 100,
+            containerStyles: { overflowX: visualContainer.comp.overflowX, overflowY: visualContainer.comp.overflowY },
+            overflowRightPx: round2(overRight),
+            overflowBottomPx: round2(overBottom),
+            overflowLeftPx: round2(overLeft),
+            overflowTopPx: round2(overTop),
             isExempt
           });
         }
@@ -1523,30 +1489,21 @@ function collectInPageAuditScript(optionsJson = "{}") {
         let match;
         while ((match = regex.exec(val)) !== null) {
           const word = match[0];
-          const startIndex = match.index;
-          const endIndex = startIndex + word.length;
           try {
             const range = document.createRange();
-            range.setStart(textNode, startIndex);
-            range.setEnd(textNode, endIndex);
+            range.setStart(textNode, match.index);
+            range.setEnd(textNode, match.index + word.length);
             const rects = range.getClientRects();
-            if (rects.length > 1) {
-              const firstTop = rects[0].top;
-              const lastTop = rects[rects.length - 1].top;
-              if (Math.abs(lastTop - firstTop) > 3) {
-                textFlowAnomalies.push({
-                  selector,
-                  tagName: tag,
-                  textSnippet,
-                  anomalyType: "mid-word-break",
-                  word,
-                  computedStyles: {
-                    wordBreak: comp.wordBreak,
-                    overflowWrap: comp.overflowWrap
-                  }
-                });
-                break;
-              }
+            if (rects.length > 1 && Math.abs(rects[rects.length - 1].top - rects[0].top) > 3) {
+              textFlowAnomalies.push({
+                selector,
+                tagName: tag,
+                textSnippet,
+                anomalyType: "mid-word-break",
+                word,
+                computedStyles: { wordBreak: comp.wordBreak, overflowWrap: comp.overflowWrap }
+              });
+              break;
             }
           } catch {
           }
@@ -1574,24 +1531,17 @@ function collectInPageAuditScript(optionsJson = "{}") {
               r.setStart(tNode, wordStart);
               r.setEnd(tNode, wordStart + w.length);
               const rRect = r.getBoundingClientRect();
-              if (rRect.width > 0 && rRect.height > 0) {
-                measuredWords.push({ top: rRect.top, word: w });
-              }
+              if (rRect.width > 0 && rRect.height > 0) measuredWords.push({ top: rRect.top, word: w });
             } catch {
             }
           }
         }
         const lineGroups = [];
         for (const item of measuredWords) {
-          let placed = false;
-          for (const group of lineGroups) {
-            if (Math.abs(item.top - group.top) < 6) {
-              group.words.push(item.word);
-              placed = true;
-              break;
-            }
-          }
-          if (!placed) {
+          let grp = lineGroups.find((g) => Math.abs(item.top - g.top) < 6);
+          if (grp) {
+            grp.words.push(item.word);
+          } else {
             lineGroups.push({ top: item.top, words: [item.word] });
           }
         }
@@ -1608,10 +1558,7 @@ function collectInPageAuditScript(optionsJson = "{}") {
               lineCount: lines.length,
               orphanText: lastLineText,
               lastLineWordCount: lastLine.length,
-              computedStyles: {
-                whiteSpace: comp.whiteSpace,
-                textWrap: comp.textWrap
-              }
+              computedStyles: { whiteSpace: comp.whiteSpace, textWrap: comp.textWrap }
             });
           } else if ((isHeadingTag || isLabelTag) && lastLine.length === 1 && lines[0].length >= 2) {
             textFlowAnomalies.push({
@@ -1622,10 +1569,7 @@ function collectInPageAuditScript(optionsJson = "{}") {
               lineCount: lines.length,
               orphanText: lastLineText,
               lastLineWordCount: 1,
-              computedStyles: {
-                textWrap: comp.textWrap || "normal",
-                whiteSpace: comp.whiteSpace
-              }
+              computedStyles: { textWrap: comp.textWrap || "normal", whiteSpace: comp.whiteSpace }
             });
           }
         }
@@ -1645,10 +1589,7 @@ function collectInPageAuditScript(optionsJson = "{}") {
             elementWidth: rect.width,
             scrollWidth: el.scrollWidth,
             clientWidth: el.clientWidth,
-            computedStyles: {
-              display: comp.display,
-              flex: comp.flex
-            }
+            computedStyles: { display: comp.display, flex: comp.flex }
           });
         }
       }
@@ -1658,9 +1599,7 @@ function collectInPageAuditScript(optionsJson = "{}") {
   for (const item of collectedElements) {
     if (!item.isInteractive) continue;
     const r = item.rect;
-    if (r.right < 0 || r.left > vp.width || r.bottom < 0 || r.top > vp.height) {
-      continue;
-    }
+    if (r.right < 0 || r.left > vp.width || r.bottom < 0 || r.top > vp.height) continue;
     const insetX = Math.min(4, r.width * 0.1);
     const insetY = Math.min(4, r.height * 0.1);
     const points = [
@@ -1677,24 +1616,62 @@ function collectInPageAuditScript(optionsJson = "{}") {
       if (pt.x >= 0 && pt.x <= vp.width && pt.y >= 0 && pt.y <= vp.height) {
         const topEl = document.elementFromPoint(pt.x, pt.y);
         if (topEl) {
-          const topSelector = getCssSelector(topEl);
-          const isTargetOrDescendant = topEl === targetDomEl || targetDomEl.contains(topEl) || topEl.contains(targetDomEl);
           raycastResults.push({
             point: pt,
-            topSelector,
+            topSelector: getCssSelector(topEl),
             topTagName: topEl.tagName.toLowerCase(),
-            isTargetOrDescendant
+            isTargetOrDescendant: topEl === targetDomEl || targetDomEl.contains(topEl) || topEl.contains(targetDomEl)
           });
         }
       }
     }
     if (raycastResults.some((res) => !res.isTargetOrDescendant)) {
-      occlusions.push({
-        selector: item.selector,
-        tagName: item.tagName,
-        boundingBox: item.rect,
-        raycastResults
-      });
+      occlusions.push({ selector: item.selector, tagName: item.tagName, boundingBox: item.rect, raycastResults });
+    }
+  }
+  const stickyItems = collectedElements.filter((el) => {
+    const pos = el.computedStyles.position;
+    return (pos === "fixed" || pos === "sticky") && el.rect.width > 20 && el.rect.height > 10;
+  });
+  const stickyOcclusions = [];
+  for (const sticky of stickyItems) {
+    const sRect = sticky.rect;
+    const sZ = parseInt(sticky.computedStyles.zIndex || "0", 10) || 0;
+    for (const target of collectedElements) {
+      if (target.selector === sticky.selector || target.ancestors?.includes(sticky.selector)) continue;
+      const isHeading = ["h1", "h2", "h3", "h4", "h5", "h6"].includes(target.tagName.toLowerCase());
+      if (!target.isInteractive && !isHeading) continue;
+      const tRect = target.rect;
+      if ((parseInt(target.computedStyles.zIndex || "0", 10) || 0) > sZ) continue;
+      const interLeft = Math.max(sRect.left, tRect.left);
+      const interTop = Math.max(sRect.top, tRect.top);
+      const interRight = Math.min(sRect.right, tRect.right);
+      const interBottom = Math.min(sRect.bottom, tRect.bottom);
+      if (interRight > interLeft + 2 && interBottom > interTop + 2) {
+        const overlapWidth = round2(interRight - interLeft);
+        const overlapHeight = round2(interBottom - interTop);
+        const overlapArea = overlapWidth * overlapHeight;
+        if (overlapArea / Math.max(1, tRect.width * tRect.height) > 0.15 || overlapArea > 100) {
+          stickyOcclusions.push({
+            stickySelector: sticky.selector,
+            stickyTagName: sticky.tagName,
+            positionType: sticky.computedStyles.position,
+            occludedSelector: target.selector,
+            occludedTagName: target.tagName,
+            isInteractive: target.isInteractive,
+            overlapRect: toRect({
+              x: interLeft,
+              y: interTop,
+              width: overlapWidth,
+              height: overlapHeight,
+              top: interTop,
+              right: interRight,
+              bottom: interBottom,
+              left: interLeft
+            })
+          });
+        }
+      }
     }
   }
   return {
@@ -1702,7 +1679,8 @@ function collectInPageAuditScript(optionsJson = "{}") {
     elements: collectedElements,
     containerOverflows,
     textFlowAnomalies,
-    occlusions
+    occlusions,
+    stickyOcclusions
   };
 }
 function getInPageAuditFunctionString() {
@@ -2070,6 +2048,497 @@ function renderCategoryCard(cat, icon) {
 function escapeHtml(str) {
   return (str || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
+
+// src/playwright/screenshotAnnotator.ts
+async function captureAndAnnotateScreenshot(page, options = {}) {
+  if (!options.includeScreenshot) {
+    return {};
+  }
+  try {
+    const buffer = await page.screenshot({ fullPage: false });
+    const screenshotBase64 = buffer.toString("base64");
+    return { screenshotBase64 };
+  } catch {
+    return {};
+  }
+}
+
+// src/playwright/matrixRunner.ts
+var DEFAULT_MATRIX_PRESETS = [
+  "Samsung Galaxy S25+",
+  "iPad Air",
+  "Desktop 1080p"
+];
+async function runResponsiveMatrixAudit(page, inspector, options = {}) {
+  const deviceNames = options.devices && options.devices.length > 0 ? options.devices : DEFAULT_MATRIX_PRESETS;
+  const devices = deviceNames.map((d) => {
+    if (typeof d === "string") {
+      return getDevicePreset(d) || {
+        name: d,
+        width: 1280,
+        height: 720,
+        deviceScaleFactor: 1,
+        isMobile: false,
+        hasTouch: false,
+        category: "desktop"
+      };
+    }
+    const customDev = d;
+    return {
+      name: customDev.name,
+      width: customDev.width,
+      height: customDev.height,
+      deviceScaleFactor: customDev.deviceScaleFactor ?? 1,
+      isMobile: customDev.isMobile ?? customDev.width < 768,
+      hasTouch: customDev.hasTouch ?? customDev.width < 768,
+      category: customDev.category ?? (customDev.width < 768 ? "mobile" : "desktop")
+    };
+  });
+  const originalViewport = page.viewportSize();
+  const results = {};
+  const deviceScores = {};
+  try {
+    for (const dev of devices) {
+      await page.setViewportSize({ width: dev.width, height: dev.height });
+      await page.waitForTimeout(150);
+      const auditResult = await inspector.audit({
+        ...options,
+        device: dev
+      });
+      results[dev.name] = auditResult;
+      deviceScores[dev.name] = auditResult.uxScore.totalScore;
+    }
+  } finally {
+    if (originalViewport) {
+      await page.setViewportSize(originalViewport);
+    }
+  }
+  const issueDeviceMap = /* @__PURE__ */ new Map();
+  for (const [deviceName, res] of Object.entries(results)) {
+    for (const ov of res.overflowIssues) {
+      const key = `overflow:${ov.selector}`;
+      if (!issueDeviceMap.has(key)) {
+        issueDeviceMap.set(key, { category: "Viewport Overflow", selector: ov.selector, description: ov.culpritDescription, devices: /* @__PURE__ */ new Set() });
+      }
+      issueDeviceMap.get(key).devices.add(deviceName);
+    }
+    for (const co of res.containerOverflowIssues) {
+      const key = `containerOverflow:${co.selector}`;
+      if (!issueDeviceMap.has(key)) {
+        issueDeviceMap.set(key, { category: "Container Overflow", selector: co.selector, description: co.culpritDescription, devices: /* @__PURE__ */ new Set() });
+      }
+      issueDeviceMap.get(key).devices.add(deviceName);
+    }
+    for (const fb of res.flexBlowoutIssues || []) {
+      const key = `flexBlowout:${fb.selector}`;
+      if (!issueDeviceMap.has(key)) {
+        issueDeviceMap.set(key, { category: "Flex Blowout", selector: fb.selector, description: fb.suggestion, devices: /* @__PURE__ */ new Set() });
+      }
+      issueDeviceMap.get(key).devices.add(deviceName);
+    }
+    for (const so of res.stickyOcclusionIssues || []) {
+      const key = `stickyOcclusion:${so.occludedSelector}`;
+      if (!issueDeviceMap.has(key)) {
+        issueDeviceMap.set(key, { category: "Sticky Occlusion", selector: so.occludedSelector, description: so.suggestion, devices: /* @__PURE__ */ new Set() });
+      }
+      issueDeviceMap.get(key).devices.add(deviceName);
+    }
+    for (const tt of res.touchTargetIssues) {
+      const key = `touchTarget:${tt.selector}`;
+      if (!issueDeviceMap.has(key)) {
+        issueDeviceMap.set(key, { category: "Touch Target", selector: tt.selector, description: tt.suggestion, devices: /* @__PURE__ */ new Set() });
+      }
+      issueDeviceMap.get(key).devices.add(deviceName);
+    }
+    for (const cc of res.contrastIssues) {
+      const key = `contrast:${cc.selector}`;
+      if (!issueDeviceMap.has(key)) {
+        issueDeviceMap.set(key, { category: "Contrast", selector: cc.selector, description: cc.suggestion, devices: /* @__PURE__ */ new Set() });
+      }
+      issueDeviceMap.get(key).devices.add(deviceName);
+    }
+  }
+  const globalIssues = [];
+  const breakpointSpecificIssues = [];
+  for (const item of issueDeviceMap.values()) {
+    if (item.devices.size === devices.length) {
+      globalIssues.push({
+        category: item.category,
+        selector: item.selector,
+        description: item.description,
+        count: item.devices.size
+      });
+    } else {
+      for (const devName of item.devices) {
+        breakpointSpecificIssues.push({
+          device: devName,
+          category: item.category,
+          selector: item.selector,
+          description: item.description
+        });
+      }
+    }
+  }
+  const scores = Object.values(deviceScores);
+  const overallScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length * 10) / 10 : 100;
+  return {
+    devices,
+    results,
+    overallScore,
+    deviceScores,
+    matrixSummary: {
+      globalIssues,
+      breakpointSpecificIssues
+    }
+  };
+}
+
+// src/core/flexBlowout.ts
+function evaluateFlexBlowout(containerOverflows = [], elements = []) {
+  const issuesMap = /* @__PURE__ */ new Map();
+  const elementMap = /* @__PURE__ */ new Map();
+  for (const el of elements || []) {
+    elementMap.set(el.selector, el);
+  }
+  for (const co of containerOverflows || []) {
+    if (co.isExempt) continue;
+    const containerEl = elementMap.get(co.containerSelector);
+    const childEl = elementMap.get(co.childSelector);
+    const containerDisplay = (co.containerStyles?.display || containerEl?.computedStyles?.display || "").toLowerCase();
+    const isFlex = containerDisplay.includes("flex");
+    const isGrid = containerDisplay.includes("grid");
+    if (!isFlex && !isGrid) continue;
+    const childMinWidth = (co.childStyles?.minWidth || childEl?.computedStyles?.minWidth || "auto").trim();
+    const childFlexShrink = (co.childStyles?.flexShrink || childEl?.computedStyles?.flexShrink || "1").trim();
+    const isCleanMinWidth = childMinWidth === "0" || childMinWidth === "0px";
+    if (isCleanMinWidth && childFlexShrink !== "0") {
+      continue;
+    }
+    const layoutType = isGrid ? "grid" : "flex";
+    const childWidth = Math.round(
+      (co.childRect?.width || (childEl ? Math.max(childEl.rect.width, childEl.scrollWidth) : 0)) * 100
+    ) / 100;
+    const parentWidth = Math.round(
+      (co.containerInnerBox?.width || co.containerRect?.width || 0) * 100
+    ) / 100;
+    const overflowPx = Math.round(
+      Math.max(
+        co.overflowRightPx || 0,
+        co.overflowLeftPx || 0,
+        childWidth - parentWidth
+      ) * 100
+    ) / 100;
+    if (overflowPx <= 0) continue;
+    const isInteractive = Boolean(childEl?.isInteractive || co.isInteractive);
+    const severity = isInteractive || overflowPx > 20 ? "critical" : "serious";
+    issuesMap.set(co.childSelector, {
+      selector: co.childSelector,
+      tagName: co.childTagName || childEl?.tagName || "div",
+      parentSelector: co.containerSelector,
+      layoutType,
+      childWidth,
+      parentWidth,
+      overflowPx,
+      severity,
+      suggestion: `Child element ${co.childSelector} is blowing out ${layoutType} container ${co.containerSelector} by ${overflowPx}px because min-width: auto or flex-shrink: 0 prevents shrinking. Set min-width: 0 and overflow: hidden; text-overflow: ellipsis on the child.`
+    });
+  }
+  for (const child of elements || []) {
+    const parentSelector = child.ancestors?.[0];
+    if (!parentSelector) continue;
+    const parentEl = elementMap.get(parentSelector);
+    if (!parentEl) continue;
+    const parentDisplay = (parentEl.computedStyles?.display || "").toLowerCase();
+    const isFlex = parentDisplay.includes("flex");
+    const isGrid = parentDisplay.includes("grid");
+    if (!isFlex && !isGrid) continue;
+    const minWidth = (child.computedStyles?.minWidth || "auto").trim();
+    const flexShrink = (child.computedStyles?.flexShrink || "1").trim();
+    const isUnconstrained = minWidth === "auto" || flexShrink === "0";
+    if (!isUnconstrained) continue;
+    const hasScrollBlowout = child.scrollWidth > child.clientWidth + 2;
+    const parentWidth = Math.round((parentEl.clientWidth || parentEl.rect?.width || 0) * 100) / 100;
+    const childWidth = Math.round(Math.max(child.scrollWidth, child.rect?.width || 0) * 100) / 100;
+    const hasBoundaryBlowout = parentWidth > 0 && childWidth > parentWidth + 2;
+    if (!hasScrollBlowout && !hasBoundaryBlowout) continue;
+    const overflowPx = Math.round(
+      Math.max(
+        hasScrollBlowout ? child.scrollWidth - child.clientWidth : 0,
+        hasBoundaryBlowout ? childWidth - parentWidth : 0
+      ) * 100
+    ) / 100;
+    if (overflowPx <= 0) continue;
+    const layoutType = isGrid ? "grid" : "flex";
+    const severity = child.isInteractive || overflowPx > 20 ? "critical" : "serious";
+    const existing = issuesMap.get(child.selector);
+    if (!existing || overflowPx > existing.overflowPx) {
+      issuesMap.set(child.selector, {
+        selector: child.selector,
+        tagName: child.tagName,
+        parentSelector,
+        layoutType,
+        childWidth,
+        parentWidth,
+        overflowPx,
+        severity,
+        suggestion: `Child element ${child.selector} is blowing out ${layoutType} container ${parentSelector} by ${overflowPx}px because min-width: auto or flex-shrink: 0 prevents shrinking. Set min-width: 0 and overflow: hidden; text-overflow: ellipsis on the child.`
+      });
+    }
+  }
+  return Array.from(issuesMap.values());
+}
+
+// src/core/stickyOcclusion.ts
+function evaluateStickyOcclusion(data) {
+  if (!data || data.length === 0) {
+    return [];
+  }
+  return data.map((item) => {
+    const severity = item.isInteractive ? "critical" : "serious";
+    const positionLabel = item.positionType === "fixed" ? "Fixed" : "Sticky";
+    const interactiveLabel = item.isInteractive ? "interactive " : "";
+    const suggestion = `${positionLabel} element ${item.stickySelector} occludes ${interactiveLabel}${item.occludedTagName} ${item.occludedSelector} (${item.overlapRect.width}x${item.overlapRect.height}px overlap). Adjust z-index, add scroll-padding-top/bottom, or increase container padding.`;
+    const overlapRect = {
+      x: item.overlapRect.x,
+      y: item.overlapRect.y,
+      width: item.overlapRect.width,
+      height: item.overlapRect.height,
+      top: item.overlapRect.top,
+      right: item.overlapRect.right,
+      bottom: item.overlapRect.bottom,
+      left: item.overlapRect.left
+    };
+    return {
+      stickySelector: item.stickySelector,
+      stickyTagName: item.stickyTagName,
+      positionType: item.positionType,
+      occludedSelector: item.occludedSelector,
+      occludedTagName: item.occludedTagName,
+      isInteractive: item.isInteractive,
+      overlapRect,
+      severity,
+      suggestion
+    };
+  });
+}
+
+// src/playwright/auditEvaluator.ts
+function evaluateAuditIssues(inPageData, mergedOptions, viewport, isMobile) {
+  const viewportFit = evaluateViewportFit(viewport.metaViewport, viewport);
+  const overflowIssues = [];
+  if (mergedOptions.checkOverflow !== false) {
+    for (const el of inPageData.elements) {
+      const over = calculateOverflow(el.rect, viewport);
+      if (over.hasOverflow) {
+        const remediation = generateOverflowRemediation({
+          tagName: el.tagName,
+          selector: el.selector,
+          styles: el.computedStyles,
+          boundingBox: el.rect,
+          viewport,
+          overflowRightPx: over.overflowRightPx
+        });
+        overflowIssues.push({
+          selector: el.selector,
+          tagName: el.tagName,
+          boundingBox: el.rect,
+          viewport,
+          overflowRightPx: over.overflowRightPx,
+          overflowBottomPx: over.overflowBottomPx,
+          overflowLeftPx: over.overflowLeftPx,
+          computedStyles: el.computedStyles,
+          culpritDescription: remediation.culpritDescription || remediation.description,
+          suggestedFix: remediation.suggestedFix || remediation.cssSuggestion,
+          severity: remediation.severity || (over.overflowRightPx > 50 ? "critical" : "warning")
+        });
+      }
+    }
+  }
+  const containerOverflowIssues = [];
+  if (mergedOptions.checkContainerOverflow !== false && inPageData.containerOverflows) {
+    for (const cov of inPageData.containerOverflows) {
+      if (cov.isExempt) continue;
+      const issue = evaluateContainerOverflow({
+        child: {
+          selector: cov.childSelector,
+          tagName: cov.childTagName,
+          id: cov.childId,
+          className: cov.childClassName,
+          rect: cov.childRect,
+          computedStyles: cov.childStyles,
+          role: cov.childRole
+        },
+        container: {
+          selector: cov.containerSelector,
+          tagName: cov.containerTagName,
+          rect: cov.containerRect,
+          innerBox: cov.containerInnerBox,
+          computedStyles: cov.containerStyles
+        }
+      });
+      if (issue) containerOverflowIssues.push(issue);
+    }
+  }
+  let flexBlowoutIssues = [];
+  if (mergedOptions.checkFlexBlowout !== false) {
+    flexBlowoutIssues = evaluateFlexBlowout(inPageData.containerOverflows || [], inPageData.elements);
+  }
+  let stickyOcclusionIssues = [];
+  if (mergedOptions.checkStickyOcclusion !== false && inPageData.stickyOcclusions) {
+    stickyOcclusionIssues = evaluateStickyOcclusion(inPageData.stickyOcclusions);
+  }
+  const textFlowIssues = [];
+  if (mergedOptions.checkTextFlow !== false && inPageData.textFlowAnomalies) {
+    for (const anomaly of inPageData.textFlowAnomalies) {
+      const issue = evaluateTextFlow(anomaly);
+      if (issue) textFlowIssues.push(issue);
+    }
+  }
+  const touchTargetIssues = [];
+  const interactiveElements = inPageData.elements.filter((e) => e.isInteractive);
+  if (mergedOptions.checkTouchTargets !== false) {
+    const allTargets = interactiveElements.map((e) => ({ selector: e.selector, boundingBox: e.rect }));
+    for (const el of interactiveElements) {
+      const issue = evaluateTouchTarget(
+        {
+          selector: el.selector,
+          tagName: el.tagName,
+          id: el.id,
+          className: el.className,
+          text: el.textSnippet,
+          boundingBox: el.rect
+        },
+        allTargets,
+        { minTargetSize: mergedOptions.minTouchTargetSize }
+      );
+      if (issue) touchTargetIssues.push(issue);
+    }
+  }
+  const readabilityIssues = [];
+  if (mergedOptions.checkReadability !== false) {
+    for (const el of inPageData.elements) {
+      if (!el.textSnippet || el.textSnippet.length === 0) continue;
+      const fontSizePx = parseFloat(el.computedStyles.fontSize) || 16;
+      const lineHeightPx = parseFloat(el.computedStyles.lineHeight) || void 0;
+      const issue = evaluateTextReadability(
+        {
+          selector: el.selector,
+          text: el.textSnippet,
+          fontSizePx,
+          lineHeightPx,
+          scrollWidth: el.scrollWidth,
+          clientWidth: el.clientWidth,
+          textOverflow: el.computedStyles.overflow,
+          overflow: el.computedStyles.overflow
+        },
+        isMobile,
+        mergedOptions.minFontSizePx
+      );
+      if (issue) readabilityIssues.push(issue);
+    }
+  }
+  const contrastIssues = [];
+  if (mergedOptions.checkContrast !== false) {
+    for (const el of inPageData.elements) {
+      if (el.textSnippet && el.computedStyles.color && el.computedStyles.backgroundColor) {
+        const issue = evaluateColorContrast(
+          {
+            selector: el.selector,
+            tagName: el.tagName,
+            textSnippet: el.textSnippet,
+            color: el.computedStyles.color || "#000000",
+            backgroundColor: el.computedStyles.backgroundColor || "#ffffff",
+            fontSizePx: parseFloat(el.computedStyles.fontSize) || 16,
+            fontWeight: el.computedStyles.fontWeight || "400"
+          },
+          { minRatio: mergedOptions.minContrastRatio || 4.5 }
+        );
+        if (issue) contrastIssues.push(issue);
+      }
+    }
+  }
+  const occlusionIssues = [];
+  if (mergedOptions.checkOcclusion !== false && inPageData.occlusions) {
+    for (const occ of inPageData.occlusions) {
+      const issue = evaluateElementOcclusion(
+        {
+          selector: occ.selector,
+          tagName: occ.tagName,
+          boundingBox: occ.boundingBox,
+          isInteractive: true
+        },
+        occ.raycastResults
+      );
+      if (issue) occlusionIssues.push(issue);
+    }
+  }
+  let collisionIssues = [];
+  if (mergedOptions.checkCollisions !== false) {
+    collisionIssues = evaluateElementCollisions(
+      inPageData.elements.map((e) => ({
+        selector: e.selector,
+        tagName: e.tagName,
+        textSnippet: e.textSnippet,
+        rect: e.rect,
+        isInteractive: e.isInteractive,
+        isTextOnly: e.isTextOnly,
+        ancestors: e.ancestors
+      }))
+    );
+  }
+  const scrollTrapIssues = [];
+  if (mergedOptions.checkScrollTraps !== false) {
+    for (const el of inPageData.elements) {
+      const issue = evaluateScrollTrap(
+        {
+          selector: el.selector,
+          tagName: el.tagName,
+          scrollHeight: el.scrollHeight,
+          clientHeight: el.clientHeight,
+          scrollWidth: el.scrollWidth,
+          clientWidth: el.clientWidth,
+          overflowX: el.computedStyles.overflowX,
+          overflowY: el.computedStyles.overflowY
+        },
+        viewport
+      );
+      if (issue) scrollTrapIssues.push(issue);
+    }
+  }
+  const accessibleNameIssues = [];
+  if (mergedOptions.checkAccessibleNames !== false) {
+    for (const el of inPageData.elements) {
+      if (el.isInteractive) {
+        const issue = evaluateAccessibleName({
+          selector: el.selector,
+          tagName: el.tagName,
+          role: el.role,
+          ariaLabel: el.ariaLabel,
+          ariaLabelledBy: el.ariaLabelledBy,
+          title: el.title,
+          innerText: el.textSnippet,
+          hasSvgOrImgChild: el.hasSvgOrImgChild
+        });
+        if (issue) accessibleNameIssues.push(issue);
+      }
+    }
+  }
+  return {
+    viewportFit,
+    overflowIssues,
+    containerOverflowIssues,
+    flexBlowoutIssues,
+    stickyOcclusionIssues,
+    textFlowIssues,
+    touchTargetIssues,
+    readabilityIssues,
+    contrastIssues,
+    occlusionIssues,
+    collisionIssues,
+    scrollTrapIssues,
+    accessibleNameIssues
+  };
+}
 var LayoutInspector = class {
   page;
   defaultOptions;
@@ -2086,10 +2555,12 @@ var LayoutInspector = class {
       checkTouchTargets: true,
       checkOverflow: true,
       checkContainerOverflow: true,
+      checkFlexBlowout: true,
       checkTextFlow: true,
       checkReadability: true,
       checkContrast: true,
       checkOcclusion: true,
+      checkStickyOcclusion: true,
       checkCollisions: true,
       checkScrollTraps: true,
       checkAccessibleNames: true,
@@ -2108,237 +2579,23 @@ var LayoutInspector = class {
     const viewport = inPageData.viewport;
     const url = this.page.url();
     const isMobile = viewport.width < 768;
-    const viewportFit = evaluateViewportFit(viewport.metaViewport, viewport);
-    const overflowIssues = [];
-    if (mergedOptions.checkOverflow !== false) {
-      for (const el of inPageData.elements) {
-        const over = calculateOverflow(el.rect, viewport);
-        if (over.hasOverflow) {
-          const remediation = generateOverflowRemediation({
-            tagName: el.tagName,
-            selector: el.selector,
-            boundingBox: el.rect,
-            viewport,
-            styles: el.computedStyles,
-            overflowRightPx: over.overflowRightPx
-          });
-          overflowIssues.push({
-            selector: el.selector,
-            tagName: el.tagName,
-            id: el.id,
-            className: el.className,
-            boundingBox: el.rect,
-            viewport,
-            overflowRightPx: over.overflowRightPx,
-            overflowBottomPx: over.overflowBottomPx,
-            overflowLeftPx: over.overflowLeftPx,
-            computedStyles: el.computedStyles,
-            culpritDescription: remediation.culpritDescription,
-            suggestedFix: remediation.suggestedFix,
-            severity: over.overflowRightPx > 10 ? "critical" : "warning"
-          });
-        }
-      }
-    }
-    const containerOverflowIssues = [];
-    if (mergedOptions.checkContainerOverflow !== false && inPageData.containerOverflows) {
-      for (const cov of inPageData.containerOverflows) {
-        if (cov.isExempt) continue;
-        const issue = evaluateContainerOverflow({
-          child: {
-            selector: cov.childSelector,
-            tagName: cov.childTagName,
-            id: cov.childId,
-            className: cov.childClassName,
-            rect: cov.childRect,
-            computedStyles: cov.childStyles,
-            role: cov.childRole
-          },
-          container: {
-            selector: cov.containerSelector,
-            tagName: cov.containerTagName,
-            rect: cov.containerRect,
-            innerBox: cov.containerInnerBox,
-            computedStyles: cov.containerStyles
-          }
-        });
-        if (issue) {
-          containerOverflowIssues.push(issue);
-        }
-      }
-    }
-    const touchTargetIssues = [];
-    const interactiveElements = inPageData.elements.filter((e) => e.isInteractive);
-    if (mergedOptions.checkTouchTargets !== false) {
-      const allTargets = interactiveElements.map((e) => ({ selector: e.selector, boundingBox: e.rect }));
-      for (const el of interactiveElements) {
-        const issue = evaluateTouchTarget(
-          {
-            selector: el.selector,
-            tagName: el.tagName,
-            id: el.id,
-            className: el.className,
-            text: el.textSnippet,
-            boundingBox: el.rect
-          },
-          allTargets,
-          { minTargetSize: mergedOptions.minTouchTargetSize }
-        );
-        if (issue) {
-          touchTargetIssues.push(issue);
-        }
-      }
-    }
-    const readabilityIssues = [];
-    if (mergedOptions.checkReadability !== false) {
-      for (const el of inPageData.elements) {
-        if (!el.textSnippet || el.textSnippet.length === 0) continue;
-        const fontSizePx = parseFloat(el.computedStyles.fontSize) || 16;
-        const lineHeightPx = parseFloat(el.computedStyles.lineHeight) || void 0;
-        const issue = evaluateTextReadability(
-          {
-            selector: el.selector,
-            text: el.textSnippet,
-            fontSizePx,
-            lineHeightPx,
-            scrollWidth: el.scrollWidth,
-            clientWidth: el.clientWidth,
-            textOverflow: el.computedStyles.overflow,
-            overflow: el.computedStyles.overflow
-          },
-          isMobile,
-          mergedOptions.minFontSizePx
-        );
-        if (issue) {
-          readabilityIssues.push(issue);
-        }
-      }
-    }
-    const textFlowIssues = [];
-    if (mergedOptions.checkTextFlow !== false && inPageData.textFlowAnomalies) {
-      for (const anomaly of inPageData.textFlowAnomalies) {
-        const issue = evaluateTextFlow(anomaly);
-        if (issue) {
-          textFlowIssues.push(issue);
-        }
-      }
-    }
-    const contrastIssues = [];
-    if (mergedOptions.checkContrast !== false) {
-      for (const el of inPageData.elements) {
-        if (!el.hasDirectText) continue;
-        if (!el.textSnippet || el.textSnippet.trim().length === 0) continue;
-        const fontSizePx = parseFloat(el.computedStyles.fontSize) || 16;
-        const color = el.computedStyles.color || "rgb(0, 0, 0)";
-        const backgroundColor = el.computedStyles.backgroundColor || "rgb(255, 255, 255)";
-        const fontWeight = el.computedStyles.fontWeight || "400";
-        const issue = evaluateColorContrast(
-          {
-            selector: el.selector,
-            tagName: el.tagName,
-            textSnippet: el.textSnippet,
-            color,
-            backgroundColor,
-            fontSizePx,
-            fontWeight
-          },
-          { minRatio: mergedOptions.minContrastRatio }
-        );
-        if (issue) {
-          contrastIssues.push(issue);
-        }
-      }
-    }
-    const occlusionIssues = [];
-    if (mergedOptions.checkOcclusion !== false) {
-      for (const occ of inPageData.occlusions) {
-        const target = inPageData.elements.find((e) => e.selector === occ.selector);
-        if (target) {
-          const issue = evaluateElementOcclusion(
-            {
-              selector: target.selector,
-              tagName: target.tagName,
-              boundingBox: target.rect,
-              isInteractive: target.isInteractive
-            },
-            occ.raycastResults
-          );
-          if (issue) {
-            occlusionIssues.push(issue);
-          }
-        }
-      }
-    }
-    let collisionIssues = [];
-    if (mergedOptions.checkCollisions !== false) {
-      collisionIssues = evaluateElementCollisions(
-        inPageData.elements.map((e) => ({
-          selector: e.selector,
-          tagName: e.tagName,
-          textSnippet: e.textSnippet,
-          rect: e.rect,
-          isInteractive: e.isInteractive,
-          isTextOnly: e.isTextOnly,
-          ancestors: e.ancestors
-        }))
-      );
-    }
-    const scrollTrapIssues = [];
-    if (mergedOptions.checkScrollTraps !== false) {
-      for (const el of inPageData.elements) {
-        const trap = evaluateScrollTrap(
-          {
-            selector: el.selector,
-            tagName: el.tagName,
-            scrollHeight: el.scrollHeight,
-            clientHeight: el.clientHeight,
-            scrollWidth: el.scrollWidth,
-            clientWidth: el.clientWidth,
-            overflowY: el.computedStyles.overflowY,
-            overflowX: el.computedStyles.overflowX
-          },
-          viewport
-        );
-        if (trap) {
-          scrollTrapIssues.push(trap);
-        }
-      }
-    }
-    const accessibleNameIssues = [];
-    if (mergedOptions.checkAccessibleNames !== false) {
-      for (const el of inPageData.elements) {
-        const issue = evaluateAccessibleName({
-          selector: el.selector,
-          tagName: el.tagName,
-          role: el.role,
-          ariaLabel: el.ariaLabel,
-          ariaLabelledBy: el.ariaLabelledBy,
-          title: el.title,
-          innerText: el.textSnippet,
-          hasSvgOrImgChild: el.hasSvgOrImgChild
-        });
-        if (issue) {
-          accessibleNameIssues.push(issue);
-        }
-      }
-    }
+    const issues = evaluateAuditIssues(inPageData, mergedOptions, viewport, isMobile);
     const focusIndicatorIssues = [];
     if (mergedOptions.checkFocusIndicators !== false) {
-      for (const el of interactiveElements) {
-        const focusData = await this.page.evaluate((selector) => {
-          const el2 = document.querySelector(selector);
-          if (!el2) return null;
-          el2.focus({ preventScroll: true });
-          const comp = window.getComputedStyle(el2);
-          const result = {
+      const candidates = inPageData.elements.filter((e) => e.isInteractive).slice(0, 5);
+      for (const el of candidates) {
+        const focusData = await this.page.evaluate((sel) => {
+          const target = document.querySelector(sel);
+          if (!target || typeof target.focus !== "function") return null;
+          target.focus();
+          const comp = window.getComputedStyle(target);
+          return {
             outlineWidth: comp.outlineWidth,
             outlineStyle: comp.outlineStyle,
             outlineColor: comp.outlineColor,
             boxShadow: comp.boxShadow
           };
-          el2.blur();
-          return result;
-        }, el.selector);
+        }, el.selector).catch(() => null);
         if (!focusData) continue;
         const issue = evaluateFocusIndicator({
           selector: el.selector,
@@ -2347,13 +2604,12 @@ var LayoutInspector = class {
           outlineStyle: focusData.outlineStyle || "none",
           outlineColor: focusData.outlineColor || "transparent",
           boxShadow: focusData.boxShadow || "none"});
-        if (issue) {
-          focusIndicatorIssues.push(issue);
-        }
+        if (issue) focusIndicatorIssues.push(issue);
       }
     }
     let thumbZoneAnalysis;
     if (mergedOptions.checkThumbZones !== false) {
+      const interactiveElements = inPageData.elements.filter((e) => e.isInteractive);
       thumbZoneAnalysis = evaluateThumbZoneErgonomics(
         interactiveElements.map((e) => ({
           selector: e.selector,
@@ -2367,26 +2623,9 @@ var LayoutInspector = class {
     if (mergedOptions.test200PercentZoomReflow) {
       zoomReflowResult = await this.test200PercentZoomReflow();
     }
-    let screenshotBase64;
-    if (mergedOptions.includeScreenshot) {
-      try {
-        const buffer = await this.page.screenshot({ fullPage: false });
-        screenshotBase64 = buffer.toString("base64");
-      } catch {
-      }
-    }
+    const { screenshotBase64 } = await captureAndAnnotateScreenshot(this.page, mergedOptions);
     const uxScore = computeUXScore({
-      overflowIssues,
-      containerOverflowIssues,
-      textFlowIssues,
-      viewportFit,
-      touchTargetIssues,
-      readabilityIssues,
-      contrastIssues,
-      occlusionIssues,
-      collisionIssues,
-      scrollTrapIssues,
-      accessibleNameIssues,
+      ...issues,
       focusIndicatorIssues,
       thumbZoneAnalysis
     });
@@ -2400,23 +2639,19 @@ var LayoutInspector = class {
       device: devicePreset,
       viewport,
       uxScore,
-      overflowIssues,
-      containerOverflowIssues,
-      textFlowIssues,
-      touchTargetIssues,
-      viewportFit,
-      readabilityIssues,
-      contrastIssues,
-      occlusionIssues,
-      collisionIssues,
-      scrollTrapIssues,
-      accessibleNameIssues,
+      ...issues,
       focusIndicatorIssues,
       thumbZoneAnalysis,
       zoomReflowResult,
       screenshotBase64,
       executionTimeMs: Date.now() - startTime
     };
+  }
+  /**
+   * Run multi-device responsive matrix audit across mobile, tablet, and desktop viewports.
+   */
+  async auditMatrix(options = {}) {
+    return runResponsiveMatrixAudit(this.page, this, options);
   }
   /**
    * Test WCAG 1.4.10 Reflow at 200% zoom.
@@ -2490,6 +2725,101 @@ var LayoutInspector = class {
     return resolvedPath;
   }
 };
+
+// src/playwright/matcherFormatters.ts
+var BOLD = "\x1B[1m";
+var RED = "\x1B[31m";
+var YELLOW = "\x1B[33m";
+var CYAN = "\x1B[36m";
+var RESET = "\x1B[0m";
+function formatAuditFailureMessage(audit, minScore = 80) {
+  const score = audit.uxScore.totalScore;
+  const grade = audit.uxScore.grade;
+  const header = `${BOLD}${RED}\u2715 Layout Audit Failed:${RESET} UX Score ${RED}${score}/100${RESET} (Required: \u2265 ${minScore}/100) \u2014 Grade ${BOLD}${RED}${grade}${RESET}
+`;
+  const categoryLines = [
+    `  \u2022 Viewport & Overflow:    ${audit.uxScore.categories.overflowAndFit.score}/${audit.uxScore.categories.overflowAndFit.maxScore} pts (${audit.uxScore.categories.overflowAndFit.issueCount} issues)`,
+    `  \u2022 Stability & Shifts:     ${audit.uxScore.categories.stability.score}/${audit.uxScore.categories.stability.maxScore} pts`,
+    `  \u2022 Touch Ergonomics:       ${audit.uxScore.categories.touchErgonomics.score}/${audit.uxScore.categories.touchErgonomics.maxScore} pts (${audit.uxScore.categories.touchErgonomics.issueCount} issues)`,
+    `  \u2022 Readability & Occlusion:${audit.uxScore.categories.readabilityAndVisibility.score}/${audit.uxScore.categories.readabilityAndVisibility.maxScore} pts (${audit.uxScore.categories.readabilityAndVisibility.issueCount} issues)`,
+    `  \u2022 Accessibility & Contrast:${audit.uxScore.categories.accessibilityAndFocus.score}/${audit.uxScore.categories.accessibilityAndFocus.maxScore} pts (${audit.uxScore.categories.accessibilityAndFocus.issueCount} issues)`
+  ].join("\n");
+  const topIssues = [];
+  for (const i of audit.overflowIssues.slice(0, 3)) {
+    topIssues.push(`  ${RED}\u2716${RESET} [Viewport Bleed] ${BOLD}${i.selector}${RESET} bleeds by +${Math.round(i.overflowRightPx)}px
+    ${CYAN}Fix:${RESET} ${i.suggestedFix}`);
+  }
+  for (const i of audit.containerOverflowIssues.slice(0, 3)) {
+    topIssues.push(`  ${RED}\u2716${RESET} [Container Bleed] ${BOLD}${i.selector}${RESET} in ${i.containerSelector} (+${Math.round(i.overflowRightPx || i.overflowBottomPx || i.overflowLeftPx)}px)
+    ${CYAN}Fix:${RESET} ${i.suggestedFix}`);
+  }
+  for (const i of (audit.flexBlowoutIssues || []).slice(0, 3)) {
+    topIssues.push(`  ${RED}\u2716${RESET} [Flex Blowout] ${BOLD}${i.selector}${RESET} exceeds ${i.parentSelector} (+${Math.round(i.overflowPx)}px)
+    ${CYAN}Fix:${RESET} ${i.suggestion}`);
+  }
+  for (const i of (audit.stickyOcclusionIssues || []).slice(0, 3)) {
+    topIssues.push(`  ${RED}\u2716${RESET} [Sticky Occlusion] ${BOLD}${i.stickySelector}${RESET} occludes ${i.occludedSelector} (${Math.round(i.overlapRect.width)}x${Math.round(i.overlapRect.height)}px)
+    ${CYAN}Fix:${RESET} ${i.suggestion}`);
+  }
+  for (const i of audit.touchTargetIssues.slice(0, 3)) {
+    topIssues.push(`  ${YELLOW}\u26A0${RESET} [Touch Target] ${BOLD}${i.selector}${RESET} (${Math.round(i.width)}x${Math.round(i.height)}px < ${i.minRequiredSize}px)
+    ${CYAN}Fix:${RESET} ${i.suggestion}`);
+  }
+  for (const i of audit.contrastIssues.slice(0, 3)) {
+    topIssues.push(`  ${RED}\u2716${RESET} [Color Contrast] ${BOLD}${i.selector}${RESET} ratio ${i.contrastRatio}:1 < ${i.requiredRatio}:1
+    ${CYAN}Fix:${RESET} ${i.suggestion}`);
+  }
+  let result = `${header}
+${BOLD}Category Breakdown:${RESET}
+${categoryLines}
+`;
+  if (topIssues.length > 0) {
+    result += `
+${BOLD}Primary Detected Issues:${RESET}
+${topIssues.join("\n")}
+`;
+  }
+  return result;
+}
+function formatOverflowFailureMessage(overflowIssues, containerIssues = []) {
+  const total = overflowIssues.length + containerIssues.length;
+  let out = `${BOLD}${RED}\u2715 Layout Overflow Detected:${RESET} Found ${BOLD}${total}${RESET} overflowing element(s):
+`;
+  for (const ov of overflowIssues) {
+    out += `  ${RED}\u2716${RESET} [Viewport Bleed] ${BOLD}${ov.selector}${RESET} (+${Math.round(ov.overflowRightPx)}px)
+    ${CYAN}Fix:${RESET} ${ov.suggestedFix}
+`;
+  }
+  for (const co of containerIssues) {
+    const px = Math.round(co.overflowRightPx || co.overflowBottomPx || 0);
+    out += `  ${RED}\u2716${RESET} [Container Bleed] ${BOLD}${co.selector}${RESET} inside ${co.containerSelector} (+${px}px)
+    ${CYAN}Fix:${RESET} ${co.suggestedFix}
+`;
+  }
+  return out;
+}
+function formatStickyOcclusionFailureMessage(issues) {
+  let out = `${BOLD}${RED}\u2715 Sticky Element Occlusion Detected:${RESET} Found ${BOLD}${issues.length}${RESET} occluded element(s):
+`;
+  for (const issue of issues) {
+    out += `  ${RED}\u2716${RESET} ${BOLD}${issue.stickySelector}${RESET} occludes ${BOLD}${issue.occludedSelector}${RESET} (${Math.round(issue.overlapRect.width)}x${Math.round(issue.overlapRect.height)}px)
+    ${CYAN}Fix:${RESET} ${issue.suggestion}
+`;
+  }
+  return out;
+}
+function formatFlexBlowoutFailureMessage(issues) {
+  let out = `${BOLD}${RED}\u2715 Flexbox / Grid Blowout Detected:${RESET} Found ${BOLD}${issues.length}${RESET} blowout element(s):
+`;
+  for (const issue of issues) {
+    out += `  ${RED}\u2716${RESET} ${BOLD}${issue.selector}${RESET} blowing out container ${BOLD}${issue.parentSelector}${RESET} (+${Math.round(issue.overflowPx)}px)
+    ${CYAN}Fix:${RESET} ${issue.suggestion}
+`;
+  }
+  return out;
+}
+
+// src/playwright/matchers.ts
 var customMatchers = {
   /**
    * Asserts that no element on the page overflows or bleeds past viewport or parent container boundaries.
@@ -2509,15 +2839,7 @@ var customMatchers = {
       if (pass) {
         return `Expected page to have layout overflow issues, but none were detected (Page width: ${audit.viewport.width}px, Scroll width: ${audit.viewport.scrollWidth}px).`;
       }
-      const issues = [];
-      if (audit.overflowIssues.length > 0) {
-        issues.push(...audit.overflowIssues.map((i) => `  - [Viewport Bleed] ${i.selector} (+${Math.round(i.overflowRightPx)}px, fix: ${i.suggestedFix})`));
-      }
-      if (audit.containerOverflowIssues.length > 0) {
-        issues.push(...audit.containerOverflowIssues.map((i) => `  - [Container Bleed] ${i.selector} in ${i.containerSelector} (+${Math.round(i.overflowRightPx || i.overflowBottomPx || i.overflowLeftPx)}px, fix: ${i.suggestedFix})`));
-      }
-      return `Expected page to have NO layout overflow, but found ${audit.overflowIssues.length + audit.containerOverflowIssues.length} overflowing element(s):
-${issues.join("\n")}`;
+      return formatOverflowFailureMessage(audit.overflowIssues, audit.containerOverflowIssues);
     };
     return {
       pass,
@@ -2746,6 +3068,54 @@ ${shiftResult.summary}
     };
   },
   /**
+   * Asserts that no sticky or fixed elements occlude underlying interactive elements or headings.
+   */
+  async toHaveNoStickyOcclusion(page, options) {
+    const inspector = new LayoutInspector(page, options);
+    const audit = await inspector.audit({
+      checkTouchTargets: false,
+      checkReadability: false,
+      ...options
+    });
+    const issues = audit.stickyOcclusionIssues || [];
+    const pass = issues.length === 0;
+    const message = () => {
+      if (pass) {
+        return `Expected page to have sticky element occlusions, but none were detected.`;
+      }
+      return formatStickyOcclusionFailureMessage(issues);
+    };
+    return {
+      pass,
+      message,
+      name: "toHaveNoStickyOcclusion"
+    };
+  },
+  /**
+   * Asserts that no flexbox or grid child elements blowout their parent container boundaries.
+   */
+  async toHaveNoFlexBlowout(page, options) {
+    const inspector = new LayoutInspector(page, options);
+    const audit = await inspector.audit({
+      checkTouchTargets: false,
+      checkReadability: false,
+      ...options
+    });
+    const issues = audit.flexBlowoutIssues || [];
+    const pass = issues.length === 0;
+    const message = () => {
+      if (pass) {
+        return `Expected page to have flex blowout issues, but all elements fit within boundaries.`;
+      }
+      return formatFlexBlowoutFailureMessage(issues);
+    };
+    return {
+      pass,
+      message,
+      name: "toHaveNoFlexBlowout"
+    };
+  },
+  /**
    * Asserts that overall UX score meets or exceeds a target minimum (default 80/100, Grade B/A).
    */
   async toPassLayoutAudit(page, options) {
@@ -2757,12 +3127,7 @@ ${shiftResult.summary}
       if (pass) {
         return `Expected layout audit score to be below ${minScore}, but scored ${audit.uxScore.totalScore} (Grade ${audit.uxScore.grade}).`;
       }
-      return `Layout audit failed! Score: ${audit.uxScore.totalScore}/100 (Grade ${audit.uxScore.grade}, minimum required: ${minScore}).
-  - Overflow & Fit: ${audit.uxScore.categories.overflowAndFit.score}/${audit.uxScore.categories.overflowAndFit.maxScore}
-  - Stability: ${audit.uxScore.categories.stability.score}/${audit.uxScore.categories.stability.maxScore}
-  - Touch Ergonomics: ${audit.uxScore.categories.touchErgonomics.score}/${audit.uxScore.categories.touchErgonomics.maxScore}
-  - Readability & Visibility: ${audit.uxScore.categories.readabilityAndVisibility.score}/${audit.uxScore.categories.readabilityAndVisibility.maxScore}
-  - Accessibility & Focus: ${audit.uxScore.categories.accessibilityAndFocus.score}/${audit.uxScore.categories.accessibilityAndFocus.maxScore}`;
+      return formatAuditFailureMessage(audit, minScore);
     };
     return {
       pass,

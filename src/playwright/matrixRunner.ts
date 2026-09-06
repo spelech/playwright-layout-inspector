@@ -18,11 +18,30 @@ export async function runResponsiveMatrixAudit(
     ? options.devices
     : DEFAULT_MATRIX_PRESETS;
 
-  const devices: (DevicePreset | { name: string; width: number; height: number })[] = deviceNames.map(d => {
+  const devices: DevicePreset[] = deviceNames.map(d => {
     if (typeof d === 'string') {
-      return getDevicePreset(d) || { name: d, width: 1280, height: 720 };
+      return (
+        getDevicePreset(d) || {
+          name: d,
+          width: 1280,
+          height: 720,
+          deviceScaleFactor: 1,
+          isMobile: false,
+          hasTouch: false,
+          category: 'desktop'
+        }
+      );
     }
-    return d;
+    const customDev = d as any;
+    return {
+      name: customDev.name,
+      width: customDev.width,
+      height: customDev.height,
+      deviceScaleFactor: customDev.deviceScaleFactor ?? 1,
+      isMobile: customDev.isMobile ?? customDev.width < 768,
+      hasTouch: customDev.hasTouch ?? customDev.width < 768,
+      category: customDev.category ?? (customDev.width < 768 ? 'mobile' : 'desktop')
+    };
   });
 
   const originalViewport = page.viewportSize();

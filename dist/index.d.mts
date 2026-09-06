@@ -1,6 +1,6 @@
-import { D as DevicePreset, B as BoundingBox, V as ViewportInfo, E as ElementComputedStyles, C as ContainerInnerBox, c as ContainerOverflowIssue, T as TextFlowAnomalyType, d as TextFlowIssue, e as LayoutShiftItem, b as LayoutShiftResult, f as ViewportFitResult, g as TouchTargetIssue, R as ReadabilityIssue, O as OcclusionIssue, h as ElementCollisionIssue, S as ScrollTrapIssue, A as AccessibleNameIssue, F as FocusIndicatorIssue, i as ColorContrastIssue, j as ThumbZoneAnalysis, Z as ZoomReflowResult, U as UXGrade, k as OverflowIssue, l as UXScore, a as LayoutAuditResult } from './matchers-CPHnzhiQ.mjs';
-export { L as LayoutAuditOptions, m as UXCategoryScore, n as customMatchers } from './matchers-CPHnzhiQ.mjs';
-export { L as LayoutInspector } from './inspector-BWamXsbU.mjs';
+import { D as DevicePreset, B as BoundingBox, V as ViewportInfo, E as ElementComputedStyles, C as ContainerInnerBox, c as ContainerOverflowIssue, T as TextFlowAnomalyType, d as TextFlowIssue, e as LayoutShiftItem, b as LayoutShiftResult, f as ViewportFitResult, g as TouchTargetIssue, h as ReadabilityIssue, O as OcclusionIssue, i as ElementCollisionIssue, S as ScrollTrapIssue, A as AccessibleNameIssue, F as FocusIndicatorIssue, j as ColorContrastIssue, k as ThumbZoneAnalysis, Z as ZoomReflowResult, U as UXGrade, l as OverflowIssue, m as FlexBlowoutIssue, n as StickyOcclusionIssue, o as UXScore, a as LayoutAuditResult } from './matchers-DyhFYEMO.mjs';
+export { L as LayoutAuditOptions, M as MatrixAuditOptions, R as ResponsiveMatrixAuditResult, p as UXCategoryScore, q as customMatchers } from './matchers-DyhFYEMO.mjs';
+export { L as LayoutInspector } from './inspector-bIMHrGtu.mjs';
 import '@playwright/test';
 
 declare const DEVICE_PRESETS: Record<string, DevicePreset>;
@@ -13,12 +13,14 @@ declare function calculateOverflow(rect: BoundingBox, viewport: ViewportInfo): {
     hasOverflow: boolean;
 };
 declare function generateOverflowRemediation(issue: {
-    tagName: string;
-    selector: string;
-    boundingBox: BoundingBox;
-    viewport: ViewportInfo;
-    styles: ElementComputedStyles;
-    overflowRightPx: number;
+    tagName?: string;
+    selector?: string;
+    boundingBox?: BoundingBox;
+    viewport?: ViewportInfo;
+    styles?: ElementComputedStyles;
+    computedStyles?: ElementComputedStyles;
+    overflowRightPx?: number;
+    overflowAmountPx?: number;
 }): {
     culpritDescription: string;
     suggestedFix: string;
@@ -267,6 +269,7 @@ declare function calculateGrade(score: number): UXGrade;
 declare function computeUXScore(params: {
     overflowIssues: OverflowIssue[];
     containerOverflowIssues?: ContainerOverflowIssue[];
+    flexBlowoutIssues?: FlexBlowoutIssue[];
     textFlowIssues?: TextFlowIssue[];
     viewportFit: ViewportFitResult;
     layoutShiftResult?: LayoutShiftResult;
@@ -274,12 +277,60 @@ declare function computeUXScore(params: {
     readabilityIssues: ReadabilityIssue[];
     contrastIssues?: ColorContrastIssue[];
     occlusionIssues: OcclusionIssue[];
+    stickyOcclusionIssues?: StickyOcclusionIssue[];
     collisionIssues?: ElementCollisionIssue[];
     scrollTrapIssues?: ScrollTrapIssue[];
     accessibleNameIssues?: AccessibleNameIssue[];
     focusIndicatorIssues?: FocusIndicatorIssue[];
     thumbZoneAnalysis?: ThumbZoneAnalysis;
 }): UXScore;
+
+/**
+ * Sticky and Fixed element occlusion scanning in the browser DOM.
+ */
+interface InPageStickyOcclusionData {
+    stickySelector: string;
+    stickyTagName: string;
+    positionType: 'fixed' | 'sticky';
+    occludedSelector: string;
+    occludedTagName: string;
+    isInteractive: boolean;
+    overlapRect: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+        top: number;
+        right: number;
+        bottom: number;
+        left: number;
+    };
+}
+
+/**
+ * Text flow and wrap anomaly DOM inspection (mid-word breaks, orphan wraps, broken buttons, crushed flex columns).
+ */
+interface TextFlowAnomalyData {
+    selector: string;
+    tagName: string;
+    textSnippet: string;
+    anomalyType: 'mid-word-break' | 'orphan-wrap' | 'broken-multiline-button' | 'crushed-flex-column';
+    word?: string;
+    orphanText?: string;
+    lineCount?: number;
+    lastLineWordCount?: number;
+    elementWidth?: number;
+    scrollWidth?: number;
+    clientWidth?: number;
+    computedStyles?: {
+        wordBreak?: string;
+        overflowWrap?: string;
+        whiteSpace?: string;
+        textWrap?: string;
+        display?: string;
+        flex?: string;
+    };
+}
 
 interface InPageAuditData {
     viewport: {
@@ -382,7 +433,7 @@ interface InPageAuditData {
             bottom: number;
             left: number;
         };
-        childStyles: any;
+        childStyles: Record<string, string | undefined>;
         childRole?: string | null;
         containerSelector: string;
         containerTagName: string;
@@ -404,34 +455,20 @@ interface InPageAuditData {
             width: number;
             height: number;
         };
-        containerStyles: any;
+        containerStyles: {
+            overflowX: string;
+            overflowY: string;
+            display?: string;
+            flexDirection?: string;
+            flexWrap?: string;
+        };
         overflowRightPx: number;
         overflowBottomPx: number;
         overflowLeftPx: number;
         overflowTopPx: number;
         isExempt: boolean;
     }>;
-    textFlowAnomalies: Array<{
-        selector: string;
-        tagName: string;
-        textSnippet: string;
-        anomalyType: 'mid-word-break' | 'orphan-wrap' | 'broken-multiline-button' | 'crushed-flex-column';
-        word?: string;
-        orphanText?: string;
-        lineCount?: number;
-        lastLineWordCount?: number;
-        elementWidth?: number;
-        scrollWidth?: number;
-        clientWidth?: number;
-        computedStyles?: {
-            wordBreak?: string;
-            overflowWrap?: string;
-            whiteSpace?: string;
-            textWrap?: string;
-            display?: string;
-            flex?: string;
-        };
-    }>;
+    textFlowAnomalies: TextFlowAnomalyData[];
     occlusions: Array<{
         selector: string;
         tagName: string;
@@ -455,10 +492,15 @@ interface InPageAuditData {
             isTargetOrDescendant: boolean;
         }>;
     }>;
+    stickyOcclusions?: InPageStickyOcclusionData[];
 }
+
+/**
+ * Self-contained in-page audit collector executed inside the browser page via Playwright page.evaluate.
+ */
 declare function collectInPageAuditScript(optionsJson?: string): InPageAuditData;
 declare function getInPageAuditFunctionString(): string;
 
 declare function generateHtmlReport(result: LayoutAuditResult): string;
 
-export { AccessibleNameIssue, BoundingBox, ColorContrastIssue, ContainerInnerBox, ContainerOverflowIssue, DEVICE_PRESETS, DevicePreset, ElementCollisionIssue, ElementComputedStyles, type ElementSnapshot, FocusIndicatorIssue, type InPageAuditData, LayoutAuditResult, LayoutShiftItem, LayoutShiftResult, OcclusionIssue, OverflowIssue, type PointSample, type RawTextFlowAnomaly, ReadabilityIssue, ScrollTrapIssue, TextFlowAnomalyType, TextFlowIssue, type ThumbZone, ThumbZoneAnalysis, TouchTargetIssue, UXGrade, UXScore, ViewportFitResult, ViewportInfo, ZoomReflowResult, calculateContainerOverflow, calculateGrade, calculateOverflow, categorizeThumbZone, collectInPageAuditScript, computeAABBOverlapArea, computeElementDisplacement, computeUXScore, evaluateAccessibleName, evaluateColorContrast, evaluateContainerOverflow, evaluateElementCollisions, evaluateElementOcclusion, evaluateFocusIndicator, evaluateLayoutShift, evaluateScrollTrap, evaluateTextFlow, evaluateTextReadability, evaluateThumbZoneErgonomics, evaluateTouchTarget, evaluateViewportFit, evaluateZoomReflow, generateContainerOverflowRemediation, generateHtmlReport, generateOverflowRemediation, generateRaycastSamplePoints, generateTextFlowRemediation, getContrastRatio, getDevicePreset, getInPageAuditFunctionString, getRelativeLuminance, isExemptFromContainerOverflow, parseColor };
+export { AccessibleNameIssue, BoundingBox, ColorContrastIssue, ContainerInnerBox, ContainerOverflowIssue, DEVICE_PRESETS, DevicePreset, ElementCollisionIssue, ElementComputedStyles, type ElementSnapshot, FlexBlowoutIssue, FocusIndicatorIssue, type InPageAuditData, LayoutAuditResult, LayoutShiftItem, LayoutShiftResult, OcclusionIssue, OverflowIssue, type PointSample, type RawTextFlowAnomaly, ReadabilityIssue, ScrollTrapIssue, StickyOcclusionIssue, TextFlowAnomalyType, TextFlowIssue, type ThumbZone, ThumbZoneAnalysis, TouchTargetIssue, UXGrade, UXScore, ViewportFitResult, ViewportInfo, ZoomReflowResult, calculateContainerOverflow, calculateGrade, calculateOverflow, categorizeThumbZone, collectInPageAuditScript, computeAABBOverlapArea, computeElementDisplacement, computeUXScore, evaluateAccessibleName, evaluateColorContrast, evaluateContainerOverflow, evaluateElementCollisions, evaluateElementOcclusion, evaluateFocusIndicator, evaluateLayoutShift, evaluateScrollTrap, evaluateTextFlow, evaluateTextReadability, evaluateThumbZoneErgonomics, evaluateTouchTarget, evaluateViewportFit, evaluateZoomReflow, generateContainerOverflowRemediation, generateHtmlReport, generateOverflowRemediation, generateRaycastSamplePoints, generateTextFlowRemediation, getContrastRatio, getDevicePreset, getInPageAuditFunctionString, getRelativeLuminance, isExemptFromContainerOverflow, parseColor };
