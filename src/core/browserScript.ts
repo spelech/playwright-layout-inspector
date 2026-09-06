@@ -1,3 +1,9 @@
+import { InPageStickyOcclusionData, scanStickyOcclusions } from './browser/stickyScanner';
+import { TextFlowAnomalyData, inspectTextFlowAnomalies } from './browser/textTraverser';
+import { VisualContainerInfo, isVisualContainer, getClosestVisualContainer, checkExemption } from './browser/containerScanner';
+import { getCssSelector } from './browser/selectorGenerator';
+import { parseRgba, getEffectiveBackgroundColor, RgbaColor } from './browser/colorUtils';
+
 export interface InPageAuditData {
   viewport: {
     width: number;
@@ -128,27 +134,7 @@ export interface InPageAuditData {
     overflowTopPx: number;
     isExempt: boolean;
   }>;
-  textFlowAnomalies: Array<{
-    selector: string;
-    tagName: string;
-    textSnippet: string;
-    anomalyType: 'mid-word-break' | 'orphan-wrap' | 'broken-multiline-button' | 'crushed-flex-column';
-    word?: string;
-    orphanText?: string;
-    lineCount?: number;
-    lastLineWordCount?: number;
-    elementWidth?: number;
-    scrollWidth?: number;
-    clientWidth?: number;
-    computedStyles?: {
-      wordBreak?: string;
-      overflowWrap?: string;
-      whiteSpace?: string;
-      textWrap?: string;
-      display?: string;
-      flex?: string;
-    };
-  }>;
+  textFlowAnomalies: TextFlowAnomalyData[];
   occlusions: Array<{
     selector: string;
     tagName: string;
@@ -169,19 +155,20 @@ export interface InPageAuditData {
       isTargetOrDescendant: boolean;
     }>;
   }>;
+  stickyOcclusions?: InPageStickyOcclusionData[];
 }
 
+/**
+ * Self-contained in-page audit collector executed inside the browser page via Playwright page.evaluate.
+ */
 export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
   const options = JSON.parse(optionsJson || '{}');
   const ignoreSelectors: string[] = options.ignoreSelectors || [];
 
   function getCssSelector(el: Element): string {
-    if (el.id) {
-      return `#${CSS.escape(el.id)}`;
-    }
+    if (el.id) return `#${CSS.escape(el.id)}`;
     const path: string[] = [];
     let current: Element | null = el;
-
     while (current && current.nodeType === Node.ELEMENT_NODE) {
       let selector = current.tagName.toLowerCase();
       if (current.id) {
@@ -200,9 +187,7 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
             selector += `.${CSS.escape(firstClass)}`;
           }
         }
-        if (nth > 1) {
-          selector += `:nth-of-type(${nth})`;
-        }
+        if (nth > 1) selector += `:nth-of-type(${nth})`;
       }
       path.unshift(selector);
       current = current.parentElement;
@@ -211,54 +196,34 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
     return path.join(' > ');
   }
 
-  const metaEl = document.querySelector('meta[name="viewport"]');
-  const metaViewport = metaEl ? metaEl.getAttribute('content') : null;
-
-  const vpWidth = window.visualViewport ? window.visualViewport.width : (document.documentElement.clientWidth || window.innerWidth);
-  const vpHeight = window.visualViewport ? window.visualViewport.height : (document.documentElement.clientHeight || window.innerHeight);
-
-  const vp = {
-    width: Math.round(vpWidth * 100) / 100,
-    height: Math.round(vpHeight * 100) / 100,
-    devicePixelRatio: window.devicePixelRatio || 1,
-    scrollX: window.scrollX,
-    scrollY: window.scrollY,
-    scrollWidth: Math.max(document.documentElement.scrollWidth, document.body ? document.body.scrollWidth : 0),
-    scrollHeight: Math.max(document.documentElement.scrollHeight, document.body ? document.body.scrollHeight : 0),
-    metaViewport
-  };
-
-  const allElements = Array.from(document.querySelectorAll('body *'));
-  const collectedElements: InPageAuditData['elements'] = [];
-  const containerOverflows: InPageAuditData['containerOverflows'] = [];
-  const textFlowAnomalies: InPageAuditData['textFlowAnomalies'] = [];
+  function parseRgba(str: string) {
+    if (!str || str === 'transparent') return null;
+    const m = str.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+    if (!m) return null;
+    return {
+      r: parseInt(m[1], 10),
+      g: parseInt(m[2], 10),
+      b: parseInt(m[3], 10),
+      a: m[4] !== undefined ? parseFloat(m[4]) : 1
+    };
+  }
 
   function isVisualContainer(targetEl: Element, style: CSSStyleDeclaration): boolean {
     const t = targetEl.tagName.toLowerCase();
     if (t === 'body' || t === 'html') return false;
-
-    // 1. Semantic container tags
     const semantic = ['dialog', 'fieldset', 'form', 'aside', 'section', 'article', 'main', 'nav', 'details', 'table'];
     if (semantic.includes(t)) return true;
-
-    // 2. Container ARIA roles
     const r = targetEl.getAttribute('role');
     if (r && ['dialog', 'alertdialog', 'region', 'tabpanel', 'group', 'form'].includes(r)) return true;
-
-    // 3. Container class names
     const c = (typeof targetEl.className === 'string' ? targetEl.className : '').toLowerCase();
-    if (/modal|card|panel|dialog|drawer|sheet|popup|box|container|wrapper|frame|window|tabpanel/.test(c)) {
-      return true;
-    }
+    if (/modal|card|panel|dialog|drawer|sheet|popup|box|container|wrapper|frame|window|tabpanel/.test(c)) return true;
 
-    // 4. Styled boundaries (explicit background, visible border, shadow, radius, or constrained layout)
     const hasBg = !!(style.backgroundColor && style.backgroundColor !== 'rgba(0, 0, 0, 0)' && style.backgroundColor !== 'transparent');
     const hasBorder = !!((parseFloat(style.borderTopWidth || '0') > 0 || parseFloat(style.borderWidth || '0') > 0) && style.borderStyle !== 'none');
     const hasShadow = !!(style.boxShadow && style.boxShadow !== 'none');
     const hasRadius = parseFloat(style.borderRadius || '0') > 0;
     const hasOverflow = style.overflow !== 'visible' || style.overflowX !== 'visible' || style.overflowY !== 'visible';
     const hasConstrainedWidth = !!((style.width && style.width.includes('px')) || (style.maxWidth && style.maxWidth !== 'none'));
-
     return Boolean((hasBg || hasBorder || hasShadow || hasRadius || hasOverflow) && hasConstrainedWidth);
   }
 
@@ -312,68 +277,61 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
 
   function checkExemption(el: Element, comp: CSSStyleDeclaration, containerComp: CSSStyleDeclaration): boolean {
     if (comp.position === 'fixed') return true;
-
-    // Popover / Tooltip / Dropdown check
     if (el.hasAttribute('popover') || (el as any).popover) return true;
     const role = el.getAttribute('role') || '';
     if (['tooltip', 'menu', 'listbox', 'dialog', 'alertdialog'].includes(role)) return true;
 
     const cls = (typeof el.className === 'string' ? el.className : '').toLowerCase();
-    if (/tooltip|popover|dropdown|menu|toast|floating|popper|modal-backdrop|select-options|tippy-box/.test(cls)) {
-      return true;
-    }
+    if (/tooltip|popover|dropdown|menu|toast|floating|popper|modal-backdrop|select-options|tippy-box/.test(cls)) return true;
 
-    // Corner controls (e.g. .btn-close, .close-btn, [aria-label="Close"])
     const ariaLabel = (el.getAttribute('aria-label') || '').toLowerCase();
-    if (
-      /close|btn-close|dismiss|badge|indicator|pill|tag/.test(cls) ||
-      ariaLabel.includes('close') ||
-      ariaLabel.includes('dismiss')
-    ) {
-      if (comp.position === 'absolute') {
-        return true;
-      }
-    }
-
-    // Container scrollable in both dimensions
-    if (
-      (containerComp.overflowX === 'auto' || containerComp.overflowX === 'scroll') &&
-      (containerComp.overflowY === 'auto' || containerComp.overflowY === 'scroll')
-    ) {
+    if ((/close|btn-close|dismiss|badge|indicator|pill|tag/.test(cls) || ariaLabel.includes('close') || ariaLabel.includes('dismiss')) && comp.position === 'absolute') {
       return true;
     }
-
-    // Decorative / sr-only / aria-hidden
+    if ((containerComp.overflowX === 'auto' || containerComp.overflowX === 'scroll') && (containerComp.overflowY === 'auto' || containerComp.overflowY === 'scroll')) {
+      return true;
+    }
     if (el.getAttribute('aria-hidden') === 'true' && comp.pointerEvents === 'none') {
       return true;
     }
-
     return false;
   }
 
-  // Set of already reported overflowing container parent elements to prevent cascading duplicates
+  const metaEl = document.querySelector('meta[name="viewport"]');
+  const metaViewport = metaEl ? metaEl.getAttribute('content') : null;
+
+  const vpWidth = window.visualViewport ? window.visualViewport.width : (document.documentElement.clientWidth || window.innerWidth);
+  const vpHeight = window.visualViewport ? window.visualViewport.height : (document.documentElement.clientHeight || window.innerHeight);
+
+  const vp = {
+    width: Math.round(vpWidth * 100) / 100,
+    height: Math.round(vpHeight * 100) / 100,
+    devicePixelRatio: window.devicePixelRatio || 1,
+    scrollX: window.scrollX,
+    scrollY: window.scrollY,
+    scrollWidth: Math.max(document.documentElement.scrollWidth, document.body ? document.body.scrollWidth : 0),
+    scrollHeight: Math.max(document.documentElement.scrollHeight, document.body ? document.body.scrollHeight : 0),
+    metaViewport
+  };
+
+  const allElements = Array.from(document.querySelectorAll('body *'));
+  const collectedElements: InPageAuditData['elements'] = [];
+  const containerOverflows: InPageAuditData['containerOverflows'] = [];
+  const textFlowAnomalies: InPageAuditData['textFlowAnomalies'] = [];
   const reportedOverflowParentSelectors = new Set<string>();
 
   for (const el of allElements) {
     const tag = el.tagName.toLowerCase();
-    if (['script', 'style', 'noscript', 'path', 'g', 'defs', 'clippath', 'symbol', 'use', 'br', 'hr'].includes(tag)) {
-      continue;
-    }
+    if (['script', 'style', 'noscript', 'path', 'g', 'defs', 'clippath', 'symbol', 'use', 'br', 'hr'].includes(tag)) continue;
 
     const selector = getCssSelector(el);
-    if (ignoreSelectors.some(ign => selector.includes(ign))) {
-      continue;
-    }
+    if (ignoreSelectors.some(ign => selector.includes(ign))) continue;
 
     const rect = el.getBoundingClientRect();
-    if (rect.width <= 0 && rect.height <= 0) {
-      continue;
-    }
+    if (rect.width <= 0 && rect.height <= 0) continue;
 
     const comp = window.getComputedStyle(el);
-    if (comp.display === 'none' || comp.visibility === 'hidden' || parseFloat(comp.opacity) === 0) {
-      continue;
-    }
+    if (comp.display === 'none' || comp.visibility === 'hidden' || parseFloat(comp.opacity) === 0) continue;
 
     const role = el.getAttribute('role');
     const isButton = tag === 'button' || role === 'button' || role === 'tab' || role === 'menuitem' || (typeof el.className === 'string' && el.className.includes('btn'));
@@ -396,14 +354,12 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
     const title = el.getAttribute('title');
     const hasAccessibleName = !!(ariaLabel?.trim() || ariaLabelledBy?.trim() || title?.trim() || textContent.length > 0);
 
-    // Detect if element is visually hidden (sr-only, display: none, 0x0)
     const isVisuallyHidden = comp.display === 'none' ||
       comp.visibility === 'hidden' ||
       parseFloat(comp.opacity) === 0 ||
       el.classList.contains('sr-only') ||
       (rect.width <= 1 && rect.height <= 1 && comp.overflow === 'hidden');
 
-    // Detect if element has direct text nodes or is a text/input element
     let hasDirectText = false;
     if (!isVisuallyHidden) {
       for (let i = 0; i < el.childNodes.length; i++) {
@@ -425,26 +381,12 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
       p = p.parentElement;
     }
 
-    function parseRgba(str: string) {
-      if (!str || str === 'transparent') return null;
-      const m = str.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
-      if (!m) return null;
-      return {
-        r: parseInt(m[1], 10),
-        g: parseInt(m[2], 10),
-        b: parseInt(m[3], 10),
-        a: m[4] !== undefined ? parseFloat(m[4]) : 1
-      };
-    }
-
     const bgStack: { r: number, g: number, b: number, a: number }[] = [];
     let currBgEl: Element | null = el;
     while (currBgEl) {
       const bgStyle = window.getComputedStyle(currBgEl).backgroundColor;
       const parsed = parseRgba(bgStyle);
-      if (parsed && parsed.a > 0) {
-        bgStack.unshift(parsed);
-      }
+      if (parsed && parsed.a > 0) bgStack.unshift(parsed);
       currBgEl = currBgEl.parentElement;
     }
 
@@ -541,19 +483,17 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
       title
     });
 
-    // --- Container Containment Geometric Inspection ---
+    // Visual Container Containment
     const visualContainer = getClosestVisualContainer(el);
     if (visualContainer && visualContainer.element !== el) {
       const isExempt = checkExemption(el, comp, visualContainer.comp);
       const inner = visualContainer.innerBox;
-
       const overRight = Math.max(0, rect.right - inner.right);
       const overLeft = Math.max(0, inner.left - rect.left);
       const overBottom = Math.max(0, rect.bottom - inner.bottom);
       const overTop = Math.max(0, inner.top - rect.top);
 
       if ((overRight > 1.5 || overLeft > 1.5 || overBottom > 2) && !isExempt) {
-        // Avoid adding child elements if an ancestor already overflowed this container
         const hasOverflowingAncestor = ancestors.some(anc => reportedOverflowParentSelectors.has(anc));
         if (!hasOverflowingAncestor) {
           reportedOverflowParentSelectors.add(selector);
@@ -601,22 +541,19 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
       }
     }
 
-    // --- Text Flow & Wrap Anomaly Inspection ---
-    // 1. Mid-word break check:
+    // Text Flow Anomaly Inspection
     if (!['pre', 'code', 'kbd', 'samp', 'textarea', 'input', 'style', 'script'].includes(tag)) {
       const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
       let textNode: Node | null;
       while ((textNode = walker.nextNode())) {
         const val = textNode.nodeValue || '';
         if (!val.trim()) continue;
-
         const regex = /[a-zA-Z]{4,}/g;
         let match: RegExpExecArray | null;
         while ((match = regex.exec(val)) !== null) {
           const word = match[0];
           const startIndex = match.index;
           const endIndex = startIndex + word.length;
-
           try {
             const range = document.createRange();
             range.setStart(textNode, startIndex);
@@ -640,14 +577,11 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
                 break;
               }
             }
-          } catch {
-            // Ignore Range error
-          }
+          } catch {}
         }
       }
     }
 
-    // 2. Multi-line button / Orphan wrap check:
     const isHeadingTag = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tag);
     const isLabelTag = tag === 'label' || (typeof el.className === 'string' && /badge|chip|pill|tag/.test(el.className));
 
@@ -661,23 +595,17 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
           const val = tNode.nodeValue || '';
           const nodeWords = val.trim().split(/\s+/).filter((w: string) => w.length > 0);
           let searchPos = 0;
-
           for (const w of nodeWords) {
             const wordStart = val.indexOf(w, searchPos);
             if (wordStart === -1) continue;
             searchPos = wordStart + w.length;
-
             try {
               const r = document.createRange();
               r.setStart(tNode, wordStart);
               r.setEnd(tNode, wordStart + w.length);
               const rRect = r.getBoundingClientRect();
-              if (rRect.width > 0 && rRect.height > 0) {
-                measuredWords.push({ top: rRect.top, word: w });
-              }
-            } catch {
-              // Ignore Range error
-            }
+              if (rRect.width > 0 && rRect.height > 0) measuredWords.push({ top: rRect.top, word: w });
+            } catch {}
           }
         }
 
@@ -691,16 +619,13 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
               break;
             }
           }
-          if (!placed) {
-            lineGroups.push({ top: item.top, words: [item.word] });
-          }
+          if (!placed) lineGroups.push({ top: item.top, words: [item.word] });
         }
 
         const lines = lineGroups.map(g => g.words);
         if (lines.length > 1) {
           const lastLine = lines[lines.length - 1];
           const lastLineText = lastLine.join(' ');
-
           if (isButton && textContent.length < 40) {
             textFlowAnomalies.push({
               selector,
@@ -734,7 +659,6 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
       }
     }
 
-    // 3. Crushed Flex Column check:
     const parentEl = el.parentElement;
     if (parentEl) {
       const parentComp = window.getComputedStyle(parentEl);
@@ -763,12 +687,8 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
   const occlusions: InPageAuditData['occlusions'] = [];
   for (const item of collectedElements) {
     if (!item.isInteractive) continue;
-
     const r = item.rect;
-    // Skip offscreen elements
-    if (r.right < 0 || r.left > vp.width || r.bottom < 0 || r.top > vp.height) {
-      continue;
-    }
+    if (r.right < 0 || r.left > vp.width || r.bottom < 0 || r.top > vp.height) continue;
 
     const insetX = Math.min(4, r.width * 0.1);
     const insetY = Math.min(4, r.height * 0.1);
@@ -810,12 +730,67 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
     }
   }
 
+  // Scan sticky / fixed element occlusions
+  const stickyItems = collectedElements.filter(el => {
+    const pos = el.computedStyles.position;
+    return (pos === 'fixed' || pos === 'sticky') && el.rect.width > 20 && el.rect.height > 10;
+  });
+
+  const stickyOcclusions: InPageStickyOcclusionData[] = [];
+  for (const sticky of stickyItems) {
+    const sRect = sticky.rect;
+    const sZ = parseInt(sticky.computedStyles.zIndex || '0', 10) || 0;
+
+    for (const target of collectedElements) {
+      if (target.selector === sticky.selector) continue;
+      const isHeading = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(target.tagName.toLowerCase());
+      if (!target.isInteractive && !isHeading) continue;
+
+      const tRect = target.rect;
+      const tZ = parseInt(target.computedStyles.zIndex || '0', 10) || 0;
+      if (tZ > sZ) continue;
+
+      const interLeft = Math.max(sRect.left, tRect.left);
+      const interTop = Math.max(sRect.top, tRect.top);
+      const interRight = Math.min(sRect.right, tRect.right);
+      const interBottom = Math.min(sRect.bottom, tRect.bottom);
+
+      if (interRight > interLeft + 2 && interBottom > interTop + 2) {
+        const overlapWidth = Math.round((interRight - interLeft) * 100) / 100;
+        const overlapHeight = Math.round((interBottom - interTop) * 100) / 100;
+        const targetArea = Math.max(1, tRect.width * tRect.height);
+        const overlapArea = overlapWidth * overlapHeight;
+        if (overlapArea / targetArea > 0.15 || overlapArea > 100) {
+          stickyOcclusions.push({
+            stickySelector: sticky.selector,
+            stickyTagName: sticky.tagName,
+            positionType: sticky.computedStyles.position as 'fixed' | 'sticky',
+            occludedSelector: target.selector,
+            occludedTagName: target.tagName,
+            isInteractive: target.isInteractive,
+            overlapRect: {
+              x: Math.round(interLeft * 100) / 100,
+              y: Math.round(interTop * 100) / 100,
+              width: overlapWidth,
+              height: overlapHeight,
+              top: Math.round(interTop * 100) / 100,
+              right: Math.round(interRight * 100) / 100,
+              bottom: Math.round(interBottom * 100) / 100,
+              left: Math.round(interLeft * 100) / 100
+            }
+          });
+        }
+      }
+    }
+  }
+
   return {
     viewport: vp,
     elements: collectedElements,
     containerOverflows,
     textFlowAnomalies,
-    occlusions
+    occlusions,
+    stickyOcclusions
   };
 }
 

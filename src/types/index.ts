@@ -222,6 +222,30 @@ export interface OcclusionIssue {
   suggestion: string;
 }
 
+export interface StickyOcclusionIssue {
+  stickySelector: string;
+  stickyTagName: string;
+  positionType: 'fixed' | 'sticky';
+  occludedSelector: string;
+  occludedTagName: string;
+  isInteractive: boolean;
+  overlapRect: BoundingBox;
+  severity: 'critical' | 'serious' | 'minor';
+  suggestion: string;
+}
+
+export interface FlexBlowoutIssue {
+  selector: string;
+  tagName: string;
+  parentSelector: string;
+  layoutType: 'flex' | 'grid';
+  childWidth: number;
+  parentWidth: number;
+  overflowPx: number;
+  severity: 'critical' | 'serious';
+  suggestion: string;
+}
+
 export interface ElementCollisionIssue {
   selectorA: string;
   selectorB: string;
@@ -349,6 +373,7 @@ export interface LayoutAuditOptions {
   minTouchTargetSize?: number; // default 24 for AA, 44 for AAA
   checkOverflow?: boolean;
   checkContainerOverflow?: boolean;
+  checkFlexBlowout?: boolean;
   checkTextFlow?: boolean;
   checkViewportFit?: boolean;
   checkReadability?: boolean;
@@ -356,6 +381,7 @@ export interface LayoutAuditOptions {
   checkContrast?: boolean;
   minContrastRatio?: number; // default 4.5 for AA normal text, 3.0 for large text
   checkOcclusion?: boolean;
+  checkStickyOcclusion?: boolean;
   checkCollisions?: boolean;
   checkScrollTraps?: boolean;
   checkAccessibleNames?: boolean;
@@ -375,6 +401,7 @@ export interface LayoutAuditResult {
   uxScore: UXScore;
   overflowIssues: OverflowIssue[];
   containerOverflowIssues: ContainerOverflowIssue[];
+  flexBlowoutIssues?: FlexBlowoutIssue[];
   textFlowIssues: TextFlowIssue[];
   layoutShiftResult?: LayoutShiftResult;
   touchTargetIssues: TouchTargetIssue[];
@@ -382,6 +409,7 @@ export interface LayoutAuditResult {
   readabilityIssues: ReadabilityIssue[];
   contrastIssues: ColorContrastIssue[];
   occlusionIssues: OcclusionIssue[];
+  stickyOcclusionIssues?: StickyOcclusionIssue[];
   collisionIssues: ElementCollisionIssue[];
   scrollTrapIssues: ScrollTrapIssue[];
   accessibleNameIssues: AccessibleNameIssue[];
@@ -392,3 +420,19 @@ export interface LayoutAuditResult {
   annotatedScreenshotBase64?: string;
   executionTimeMs: number;
 }
+
+export interface MatrixAuditOptions extends LayoutAuditOptions {
+  devices?: (string | DevicePreset)[];
+}
+
+export interface ResponsiveMatrixAuditResult {
+  devices: (DevicePreset | { name: string; width: number; height: number })[];
+  results: Record<string, LayoutAuditResult>;
+  overallScore: number;
+  deviceScores: Record<string, number>;
+  matrixSummary: {
+    globalIssues: Array<{ category: string; selector: string; description: string; count: number }>;
+    breakpointSpecificIssues: Array<{ device: string; category: string; selector: string; description: string }>;
+  };
+}
+
