@@ -1,6 +1,12 @@
 import { expect as baseExpect, Page } from '@playwright/test';
 import { LayoutInspector } from './inspector';
 import { LayoutAuditOptions } from '../types';
+import {
+  formatAuditFailureMessage,
+  formatOverflowFailureMessage,
+  formatStickyOcclusionFailureMessage,
+  formatFlexBlowoutFailureMessage
+} from './matcherFormatters';
 
 export const customMatchers = {
   /**
@@ -23,14 +29,7 @@ export const customMatchers = {
       if (pass) {
         return `Expected page to have layout overflow issues, but none were detected (Page width: ${audit.viewport.width}px, Scroll width: ${audit.viewport.scrollWidth}px).`;
       }
-      const issues: string[] = [];
-      if (audit.overflowIssues.length > 0) {
-        issues.push(...audit.overflowIssues.map(i => `  - [Viewport Bleed] ${i.selector} (+${Math.round(i.overflowRightPx)}px, fix: ${i.suggestedFix})`));
-      }
-      if (audit.containerOverflowIssues.length > 0) {
-        issues.push(...audit.containerOverflowIssues.map(i => `  - [Container Bleed] ${i.selector} in ${i.containerSelector} (+${Math.round(i.overflowRightPx || i.overflowBottomPx || i.overflowLeftPx)}px, fix: ${i.suggestedFix})`));
-      }
-      return `Expected page to have NO layout overflow, but found ${audit.overflowIssues.length + audit.containerOverflowIssues.length} overflowing element(s):\n${issues.join('\n')}`;
+      return formatOverflowFailureMessage(audit.overflowIssues, audit.containerOverflowIssues);
     };
 
     return {
@@ -300,6 +299,60 @@ export const customMatchers = {
   },
 
   /**
+   * Asserts that no sticky or fixed elements occlude underlying interactive elements or headings.
+   */
+  async toHaveNoStickyOcclusion(page: Page, options?: LayoutAuditOptions) {
+    const inspector = new LayoutInspector(page, options);
+    const audit = await inspector.audit({
+      checkTouchTargets: false,
+      checkReadability: false,
+      ...options
+    });
+
+    const issues = audit.stickyOcclusionIssues || [];
+    const pass = issues.length === 0;
+    const message = () => {
+      if (pass) {
+        return `Expected page to have sticky element occlusions, but none were detected.`;
+      }
+      return formatStickyOcclusionFailureMessage(issues);
+    };
+
+    return {
+      pass,
+      message,
+      name: 'toHaveNoStickyOcclusion'
+    };
+  },
+
+  /**
+   * Asserts that no flexbox or grid child elements blowout their parent container boundaries.
+   */
+  async toHaveNoFlexBlowout(page: Page, options?: LayoutAuditOptions) {
+    const inspector = new LayoutInspector(page, options);
+    const audit = await inspector.audit({
+      checkTouchTargets: false,
+      checkReadability: false,
+      ...options
+    });
+
+    const issues = audit.flexBlowoutIssues || [];
+    const pass = issues.length === 0;
+    const message = () => {
+      if (pass) {
+        return `Expected page to have flex blowout issues, but all elements fit within boundaries.`;
+      }
+      return formatFlexBlowoutFailureMessage(issues);
+    };
+
+    return {
+      pass,
+      message,
+      name: 'toHaveNoFlexBlowout'
+    };
+  },
+
+  /**
    * Asserts that overall UX score meets or exceeds a target minimum (default 80/100, Grade B/A).
    */
   async toPassLayoutAudit(page: Page, options?: LayoutAuditOptions & { minScore?: number }) {
@@ -312,12 +365,7 @@ export const customMatchers = {
       if (pass) {
         return `Expected layout audit score to be below ${minScore}, but scored ${audit.uxScore.totalScore} (Grade ${audit.uxScore.grade}).`;
       }
-      return `Layout audit failed! Score: ${audit.uxScore.totalScore}/100 (Grade ${audit.uxScore.grade}, minimum required: ${minScore}).\n` +
-        `  - Overflow & Fit: ${audit.uxScore.categories.overflowAndFit.score}/${audit.uxScore.categories.overflowAndFit.maxScore}\n` +
-        `  - Stability: ${audit.uxScore.categories.stability.score}/${audit.uxScore.categories.stability.maxScore}\n` +
-        `  - Touch Ergonomics: ${audit.uxScore.categories.touchErgonomics.score}/${audit.uxScore.categories.touchErgonomics.maxScore}\n` +
-        `  - Readability & Visibility: ${audit.uxScore.categories.readabilityAndVisibility.score}/${audit.uxScore.categories.readabilityAndVisibility.maxScore}\n` +
-        `  - Accessibility & Focus: ${audit.uxScore.categories.accessibilityAndFocus.score}/${audit.uxScore.categories.accessibilityAndFocus.maxScore}`;
+      return formatAuditFailureMessage(audit, minScore);
     };
 
     return {
@@ -336,6 +384,8 @@ declare global {
     interface Matchers<R, T> {
       toHaveNoLayoutOverflow(options?: LayoutAuditOptions): Promise<R>;
       toHaveNoContainerOverflow(options?: LayoutAuditOptions): Promise<R>;
+      toHaveNoStickyOcclusion(options?: LayoutAuditOptions): Promise<R>;
+      toHaveNoFlexBlowout(options?: LayoutAuditOptions): Promise<R>;
       toHaveCleanTextFlow(options?: LayoutAuditOptions): Promise<R>;
       toHaveMobileFit(options?: LayoutAuditOptions): Promise<R>;
       toHaveTouchFriendlyTargets(options?: { minSize?: number }): Promise<R>;

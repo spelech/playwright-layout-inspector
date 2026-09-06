@@ -27,6 +27,7 @@ export function scanStickyOcclusions(
     isInteractive: boolean;
     isTextOnly: boolean;
     rect: { top: number; right: number; bottom: number; left: number; width: number; height: number };
+    ancestors?: string[];
     computedStyles: { position: string; zIndex?: string; display: string };
   }>
 ): InPageStickyOcclusionData[] {
@@ -45,6 +46,7 @@ export function scanStickyOcclusions(
 
     for (const target of elements) {
       if (target.selector === sticky.selector) continue;
+      if (target.ancestors && target.ancestors.includes(sticky.selector)) continue;
       // We are interested in sticky elements occluding interactive elements or headings
       const isHeading = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(target.tagName.toLowerCase());
       if (!target.isInteractive && !isHeading) continue;

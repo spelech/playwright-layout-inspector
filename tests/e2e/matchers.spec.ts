@@ -94,4 +94,60 @@ test.describe('Playwright Custom Matchers', () => {
     await page.goto('http://localhost:5173/?scenario=clean');
     await expect(page).toPassLayoutAudit({ minScore: 70 });
   });
+
+  test('toHaveNoStickyOcclusion passes on clean and fails when fixed header covers button', async ({ page }) => {
+    await page.setContent(`
+      <!DOCTYPE html>
+      <html>
+      <body>
+        <div style="height: 100px; padding: 20px;">
+          <button id="btn-free">Safe Button</button>
+        </div>
+      </body>
+      </html>
+    `);
+    await expect(page).toHaveNoStickyOcclusion();
+
+    await page.setContent(`
+      <!DOCTYPE html>
+      <html>
+      <body style="margin: 0;">
+        <header style="position: fixed; top: 0; left: 0; right: 0; height: 60px; z-index: 100; background: #333;"></header>
+        <button id="btn-covered" style="position: absolute; top: 10px; left: 20px;">Covered Button</button>
+      </body>
+      </html>
+    `);
+    await expect(expect(page).toHaveNoStickyOcclusion()).rejects.toThrow();
+  });
+
+  test('toHaveNoFlexBlowout passes on clean and fails on unconstrained flex blowout', async ({ page }) => {
+    await page.setContent(`
+      <!DOCTYPE html>
+      <html>
+      <body>
+        <div style="display: flex; width: 300px;">
+          <div style="min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            Clean contained content
+          </div>
+        </div>
+      </body>
+      </html>
+    `);
+    await expect(page).toHaveNoFlexBlowout();
+
+    await page.setContent(`
+      <!DOCTYPE html>
+      <html>
+      <body>
+        <div id="parent" style="display: flex; width: 200px; border: 1px solid #ccc;">
+          <div id="blowout-child" style="min-width: auto; flex-shrink: 0; width: 350px;">
+            Unconstrained wide child blowing out flex parent
+          </div>
+        </div>
+      </body>
+      </html>
+    `);
+    await expect(expect(page).toHaveNoFlexBlowout()).rejects.toThrow();
+  });
 });
+

@@ -265,10 +265,12 @@ export function evaluateAuditIssues(
         const issue = evaluateAccessibleName({
           selector: el.selector,
           tagName: el.tagName,
-          hasAccessibleName: el.hasAccessibleName,
-          textSnippet: el.textSnippet,
-          hasSvgOrImgChild: el.hasSvgOrImgChild,
-          role: el.role
+          role: el.role,
+          ariaLabel: el.ariaLabel,
+          ariaLabelledBy: el.ariaLabelledBy,
+          title: el.title,
+          innerText: el.textSnippet,
+          hasSvgOrImgChild: el.hasSvgOrImgChild
         });
         if (issue) accessibleNameIssues.push(issue);
       }

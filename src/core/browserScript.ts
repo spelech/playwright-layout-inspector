@@ -743,6 +743,7 @@ export function collectInPageAuditScript(optionsJson = '{}'): InPageAuditData {
 
     for (const target of collectedElements) {
       if (target.selector === sticky.selector) continue;
+      if (target.ancestors && target.ancestors.includes(sticky.selector)) continue;
       const isHeading = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(target.tagName.toLowerCase());
       if (!target.isInteractive && !isHeading) continue;
 
