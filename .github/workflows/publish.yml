@@ -5,6 +5,11 @@ on:
     tags:
       - 'v*.*.*'
   workflow_dispatch:
+    inputs:
+      otp:
+        description: 'NPM 2FA One-Time Password (if your token requires 2FA OTP)'
+        required: false
+        type: string
 
 jobs:
   publish:
@@ -37,6 +42,11 @@ jobs:
         run: npm run build
 
       - name: Publish to NPM
-        run: npm publish --provenance --access public
+        run: |
+          if [ -n "${{ inputs.otp }}" ]; then
+            npm publish --provenance --access public --otp="${{ inputs.otp }}"
+          else
+            npm publish --provenance --access public
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
