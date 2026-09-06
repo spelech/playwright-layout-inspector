@@ -3,12 +3,14 @@ import {
   ColorContrastIssue,
   ContainerOverflowIssue,
   ElementCollisionIssue,
+  FlexBlowoutIssue,
   FocusIndicatorIssue,
   LayoutShiftResult,
   OcclusionIssue,
   OverflowIssue,
   ReadabilityIssue,
   ScrollTrapIssue,
+  StickyOcclusionIssue,
   TextFlowIssue,
   ThumbZoneAnalysis,
   TouchTargetIssue,
@@ -30,6 +32,7 @@ export function calculateGrade(score: number): UXGrade {
 export function computeUXScore(params: {
   overflowIssues: OverflowIssue[];
   containerOverflowIssues?: ContainerOverflowIssue[];
+  flexBlowoutIssues?: FlexBlowoutIssue[];
   textFlowIssues?: TextFlowIssue[];
   viewportFit: ViewportFitResult;
   layoutShiftResult?: LayoutShiftResult;
@@ -37,6 +40,7 @@ export function computeUXScore(params: {
   readabilityIssues: ReadabilityIssue[];
   contrastIssues?: ColorContrastIssue[];
   occlusionIssues: OcclusionIssue[];
+  stickyOcclusionIssues?: StickyOcclusionIssue[];
   collisionIssues?: ElementCollisionIssue[];
   scrollTrapIssues?: ScrollTrapIssue[];
   accessibleNameIssues?: AccessibleNameIssue[];
@@ -46,6 +50,7 @@ export function computeUXScore(params: {
   const {
     overflowIssues,
     containerOverflowIssues = [],
+    flexBlowoutIssues = [],
     textFlowIssues = [],
     viewportFit,
     layoutShiftResult,
@@ -53,6 +58,7 @@ export function computeUXScore(params: {
     readabilityIssues,
     contrastIssues = [],
     occlusionIssues,
+    stickyOcclusionIssues = [],
     collisionIssues = [],
     scrollTrapIssues = [],
     accessibleNameIssues = [],
@@ -74,12 +80,15 @@ export function computeUXScore(params: {
   for (const cIssue of containerOverflowIssues) {
     overflowPenalty += (cIssue.severity === 'critical' ? 8 : 3);
   }
+  for (const fIssue of flexBlowoutIssues) {
+    overflowPenalty += (fIssue.severity === 'critical' ? 8 : 4);
+  }
   for (const trap of scrollTrapIssues) {
     overflowPenalty += (trap.severity === 'critical' ? 6 : 2);
   }
 
   const overflowScoreVal = Math.max(0, Math.min(maxOverflowScore, maxOverflowScore - overflowPenalty));
-  const totalOverflowIssues = overflowIssues.length + containerOverflowIssues.length + scrollTrapIssues.length + viewportFit.issues.length;
+  const totalOverflowIssues = overflowIssues.length + containerOverflowIssues.length + flexBlowoutIssues.length + scrollTrapIssues.length + viewportFit.issues.length;
   const overflowCategory: UXCategoryScore = {
     name: 'Overflow & Viewport Fit',
     score: Math.round(overflowScoreVal * 10) / 10,
@@ -88,9 +97,9 @@ export function computeUXScore(params: {
     grade: calculateGrade((overflowScoreVal / maxOverflowScore) * 100),
     passed: overflowScoreVal >= maxOverflowScore * 0.8,
     issueCount: totalOverflowIssues,
-    summary: overflowIssues.length === 0 && containerOverflowIssues.length === 0 && scrollTrapIssues.length === 0 && !viewportFit.contentBleeds
+    summary: overflowIssues.length === 0 && containerOverflowIssues.length === 0 && flexBlowoutIssues.length === 0 && scrollTrapIssues.length === 0 && !viewportFit.contentBleeds
       ? 'Perfect viewport and container containment fit without horizontal bleed or scroll traps.'
-      : `${overflowIssues.length} viewport overflow, ${containerOverflowIssues.length} container bleed, ${scrollTrapIssues.length} scroll trap issues detected.`
+      : `${overflowIssues.length} viewport overflow, ${containerOverflowIssues.length} container bleed, ${flexBlowoutIssues.length} flex blowout, ${scrollTrapIssues.length} scroll trap issues detected.`
   };
 
   // 2. Stability & Layout Shift Category (20% weight)
@@ -156,12 +165,15 @@ export function computeUXScore(params: {
   for (const occ of occlusionIssues) {
     readabilityPenalty += (occ.severity === 'critical' ? 5 : 2);
   }
+  for (const sOcc of stickyOcclusionIssues) {
+    readabilityPenalty += (sOcc.severity === 'critical' ? 6 : 3);
+  }
   for (const col of collisionIssues) {
     readabilityPenalty += (col.severity === 'critical' ? 5 : 2);
   }
 
   const readabilityScoreVal = Math.max(0, Math.min(maxReadabilityScore, maxReadabilityScore - readabilityPenalty));
-  const totalVisibilityIssues = readabilityIssues.length + textFlowIssues.length + occlusionIssues.length + collisionIssues.length;
+  const totalVisibilityIssues = readabilityIssues.length + textFlowIssues.length + occlusionIssues.length + stickyOcclusionIssues.length + collisionIssues.length;
   const readabilityCategory: UXCategoryScore = {
     name: 'Readability & Visual Hierarchy',
     score: Math.round(readabilityScoreVal * 10) / 10,

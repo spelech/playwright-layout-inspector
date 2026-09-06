@@ -143,6 +143,63 @@ describe('UX Score Calculator', () => {
     expect(score.categories.readabilityAndVisibility.score).toBeLessThan(20);
   });
 
+  it('penalizes flex blowout and sticky element occlusion', () => {
+    const cleanFit: ViewportFitResult = {
+      isValidMetaViewport: true,
+      metaContent: 'width=device-width, initial-scale=1.0',
+      allowsUserZoom: true,
+      isWidthDeviceWidth: true,
+      initialScale: 1.0,
+      isMobileOptimized: true,
+      pageScrollWidth: 412,
+      windowWidth: 412,
+      horizontalOverflowRatio: 1.0,
+      contentBleeds: false,
+      issues: [],
+      suggestions: []
+    };
+
+    const score = computeUXScore({
+      overflowIssues: [],
+      containerOverflowIssues: [],
+      flexBlowoutIssues: [
+        {
+          selector: 'div#unconstrained-child',
+          tagName: 'div',
+          parentSelector: 'div#flex-parent',
+          layoutType: 'flex',
+          childWidth: 400,
+          parentWidth: 250,
+          overflowPx: 150,
+          severity: 'critical',
+          suggestion: 'Set min-width: 0'
+        }
+      ],
+      stickyOcclusionIssues: [
+        {
+          stickySelector: 'header#sticky-nav',
+          stickyTagName: 'header',
+          positionType: 'fixed',
+          occludedSelector: 'button#cta',
+          occludedTagName: 'button',
+          isInteractive: true,
+          overlapRect: { x: 0, y: 0, width: 100, height: 40, top: 0, right: 100, bottom: 40, left: 0 },
+          severity: 'critical',
+          suggestion: 'Add scroll-padding-top'
+        }
+      ],
+      textFlowIssues: [],
+      viewportFit: cleanFit,
+      touchTargetIssues: [],
+      readabilityIssues: [],
+      occlusionIssues: []
+    });
+
+    expect(score.totalScore).toBeLessThan(90);
+    expect(score.categories.overflowAndFit.score).toBe(17); // 25 - 8 = 17
+    expect(score.categories.readabilityAndVisibility.score).toBe(14); // 20 - 6 = 14
+  });
+
   it('calculates grades correctly', () => {
     expect(calculateGrade(97)).toBe('A+');
     expect(calculateGrade(88)).toBe('A');
